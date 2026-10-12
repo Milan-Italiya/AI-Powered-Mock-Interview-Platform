@@ -13,7 +13,7 @@ createRoot(document.getElementById('root')).render(
         richColors
         // theme='light'
         position='top-right'
-        closeButton
+        // closeButton
         duration={4000}
         // toastOptions={{
         //   classNames: {

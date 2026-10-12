@@ -1,24 +1,83 @@
 import {
     createContext,
+    useCallback,
     useContext,
     useEffect,
     useState,
 } from "react";
 
+import { getProfileDatasource } from "../datasource/user.datasource.js";
+
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    const [token, setToken] = useState(null);
+    const [token, setToken] = useState(() =>
+        localStorage.getItem("token")
+    );
+
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const storedToken = localStorage.getItem("token");
-
-        if (storedToken) {
-            setToken(storedToken);
+    const refreshUser = useCallback(async () => {
+        if (!localStorage.getItem("token")) {
+            setUser(null);
+            return null;
         }
 
-        setLoading(false);
+        try {
+            const response = await getProfileDatasource();
+
+            const currentUser =
+                response?.data?.user ??
+                response?.user ??
+                response?.data?.profile ??
+                response?.profile ??
+                null;
+
+            if (currentUser) {
+                setUser(currentUser);
+            }
+
+            return currentUser;
+        } catch (error) {
+            console.error("Refresh User Error:", error);
+            throw error;
+        }
+    }, []);
+
+    useEffect(() => {
+        let active = true;
+
+        const initializeAuth = async () => {
+            try {
+                if (localStorage.getItem("token")) {
+                    const response = await getProfileDatasource();
+
+                    const currentUser =
+                        response?.data?.user ??
+                        response?.user ??
+                        response?.data?.profile ??
+                        response?.profile ??
+                        null;
+
+                    if (active) {
+                        setUser(currentUser);
+                    }
+                }
+            } catch (error) {
+                console.error("Initialize Auth Error:", error);
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        initializeAuth();
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     const login = (newToken) => {
@@ -29,6 +88,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem("token");
         setToken(null);
+        setUser(null);
     };
 
     const isAuthenticated = Boolean(token);
@@ -37,6 +97,9 @@ export const AuthProvider = ({ children }) => {
         <AuthContext.Provider
             value={{
                 token,
+                user,
+                setUser,
+                refreshUser,
                 loading,
                 isAuthenticated,
                 login,
