@@ -428,31 +428,66 @@ const EditProfile = () => {
         try {
             setSaving(true);
 
-            const payload = {
+            const fields = {
                 fullName,
                 bio: formData.bio.trim(),
                 selectedRole: formData.selectedRole,
                 experienceLevel: formData.experienceLevel,
                 targetCompany: formData.targetCompany.trim(),
-                skills: formData.skills.map((skill) => skill.trim()),
-                learningGoals: formData.learningGoals.map((goal) =>
-                    goal.trim()
+                skills: JSON.stringify(
+                    formData.skills.map((skill) => skill.trim())
+                ),
+                learningGoals: JSON.stringify(
+                    formData.learningGoals.map((goal) => goal.trim())
                 ),
                 preferredDifficulty: formData.preferredDifficulty,
                 preferredInterviewType: formData.preferredInterviewType,
-                profilePicture: profilePicture || null,
             };
+
+            let payload;
+
+            if (profilePicture instanceof File) {
+                payload = new FormData();
+
+                Object.entries(fields).forEach(([key, value]) => {
+                    payload.append(key, value);
+                });
+
+                // The backend upload middleware must use this same field name.
+                payload.append("profilePicture", profilePicture);
+            } else {
+                payload = {
+                    ...fields,
+                    skills: formData.skills.map((skill) => skill.trim()),
+                    learningGoals: formData.learningGoals.map((goal) =>
+                        goal.trim()
+                    ),
+                };
+            }
 
             const response = await updateProfile(payload);
 
-            if (response?.success === false) {
+            if (response?.success === false || response?.data?.success === false) {
                 throw new Error(
-                    response?.message || "Failed to update profile."
+                    response?.message ||
+                    response?.data?.message ||
+                    "Failed to update profile."
                 );
             }
 
+            // Reload the saved profile so the page uses the persistent image URL.
+            const refreshedResponse = await getProfile();
+            const refreshedUser = getProfileFromResponse(refreshedResponse);
+
+            if (refreshedUser && typeof refreshedUser === "object") {
+                setFormData(normalizeProfile(refreshedUser));
+                setInitialFormData(normalizeProfile(refreshedUser));
+            }
+
             toast.success(
-                response?.message || "Profile updated successfully."
+                response?.message ||
+                response?.data?.message ||
+                "Profile updated successfully."
             );
 
             navigate("/profile", { replace: true });
@@ -466,6 +501,7 @@ const EditProfile = () => {
             setSaving(false);
         }
     };
+
 
     /* =====================================================
        LOADING STATE

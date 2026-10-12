@@ -60,7 +60,6 @@ const Profile = () => {
     }, []);
 
     // Fetch profile information.
-    // Fetch profile information.
     const fetchProfile = async () => {
         setLoading(true);
         setError("");
@@ -82,9 +81,7 @@ const Profile = () => {
             setUser({
                 ...EMPTY_PROFILE,
                 ...profile,
-                skills: Array.isArray(profile.skills)
-                    ? profile.skills
-                    : [],
+                skills: Array.isArray(profile.skills) ? profile.skills : [],
                 learningGoals: Array.isArray(profile.learningGoals)
                     ? profile.learningGoals
                     : [],
@@ -101,6 +98,11 @@ const Profile = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchProfile();
+    }, []);
+
 
     useEffect(() => {
         let cancelled = false;
