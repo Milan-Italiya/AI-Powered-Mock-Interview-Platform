@@ -61,6 +61,7 @@ export const updateProfile = async (userId, updatedData, profilePicture) => {
 }
 
 // Remove Profile Picture
+
 export const removeProfilePicture = async (userId) => {
     const user = await User.findById(userId);
 
@@ -68,30 +69,45 @@ export const removeProfilePicture = async (userId) => {
         throw new Error("User not found.");
     }
 
-    if (!user.profilePicture || typeof user.profilePicture !== "string") {
-        user.profilePicture = "";
-        await user.save();
-        return user;
-    }
+    if (user.profilePicture) {
+        try {
+            const url = new URL(user.profilePicture);
+            const parts = url.pathname.split("/");
 
-    const url = user.profilePicture;
+            const uploadIndex = parts.indexOf("upload");
 
-    const uploadIndex = url.indexOf("/upload/");
+            if (uploadIndex !== -1) {
+                const publicIdParts = parts.slice(uploadIndex + 1);
 
-    if (uploadIndex !== -1) {
-        let publicId = url.substring(uploadIndex + 8);
+                // Remove the Cloudinary version segment, e.g. v1234567890.
+                if (/^v\d+$/.test(publicIdParts[0] || "")) {
+                    publicIdParts.shift();
+                }
 
-        publicId = publicId.replace(/^v\d+\//, "");
-        publicId = publicId.replace(/\.[^/.]+$/, "");
+                const lastIndex = publicIdParts.length - 1;
 
-        await cloudinary.uploader.destroy(publicId, {
-            resource_type: "image",
-            type: "upload",
-        });
+                // Remove the image extension.
+                if (lastIndex >= 0) {
+                    publicIdParts[lastIndex] =
+                        publicIdParts[lastIndex].replace(/\.[^.]+$/, "");
+                }
+
+                const publicId = publicIdParts.join("/");
+
+                if (publicId) {
+                    await cloudinary.uploader.destroy(publicId, {
+                        resource_type: "image",
+                        type: "upload",
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Cloudinary image removal error:", error);
+            throw error;
+        }
     }
 
     user.profilePicture = "";
-
     await user.save();
 
     return user;

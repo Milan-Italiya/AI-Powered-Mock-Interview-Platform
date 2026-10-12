@@ -1,3 +1,4 @@
+
 import {
     createContext,
     useCallback,
@@ -9,6 +10,27 @@ import {
 import { getProfileDatasource } from "../datasource/user.datasource.js";
 
 const AuthContext = createContext(null);
+
+const extractUser = (response) => {
+    const candidates = [
+        response?.data?.user,
+        response?.user,
+        response?.data?.profile,
+        response?.profile,
+        response?.data?.data?.user,
+        response?.data,
+    ];
+
+    return (
+        candidates.find(
+            (candidate) =>
+                candidate &&
+                typeof candidate === "object" &&
+                !Array.isArray(candidate) &&
+                (candidate._id || candidate.id || candidate.email)
+        ) || null
+    );
+};
 
 export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(() =>
@@ -24,48 +46,48 @@ export const AuthProvider = ({ children }) => {
             return null;
         }
 
-        try {
-            const response = await getProfileDatasource();
+        const response = await getProfileDatasource();
+        const currentUser = extractUser(response);
 
-            const currentUser =
-                response?.data?.user ??
-                response?.user ??
-                response?.data?.profile ??
-                response?.profile ??
-                null;
-
-            if (currentUser) {
-                setUser(currentUser);
-            }
-
-            return currentUser;
-        } catch (error) {
-            console.error("Refresh User Error:", error);
-            throw error;
+        if (!currentUser) {
+            console.error(
+                "Profile API returned an unexpected response:",
+                response
+            );
+            throw new Error(
+                "Unable to find user data in the profile response."
+            );
         }
+
+        setUser(currentUser);
+        return currentUser;
     }, []);
 
     useEffect(() => {
         let active = true;
 
         const initializeAuth = async () => {
+            if (!token) {
+                setUser(null);
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+
             try {
-                if (localStorage.getItem("token")) {
-                    const response = await getProfileDatasource();
+                const response = await getProfileDatasource();
+                const currentUser = response?.data?.user ?? null;
 
-                    const currentUser =
-                        response?.data?.user ??
-                        response?.user ??
-                        response?.data?.profile ??
-                        response?.profile ??
-                        null;
-
-                    if (active) {
-                        setUser(currentUser);
-                    }
+                if (active) {
+                    setUser(currentUser);
                 }
             } catch (error) {
                 console.error("Initialize Auth Error:", error);
+
+                if (active) {
+                    setUser(null);
+                }
             } finally {
                 if (active) {
                     setLoading(false);
@@ -78,7 +100,7 @@ export const AuthProvider = ({ children }) => {
         return () => {
             active = false;
         };
-    }, []);
+    }, [token]);
 
     const login = (newToken) => {
         localStorage.setItem("token", newToken);
@@ -91,8 +113,6 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
-    const isAuthenticated = Boolean(token);
-
     return (
         <AuthContext.Provider
             value={{
@@ -101,7 +121,7 @@ export const AuthProvider = ({ children }) => {
                 setUser,
                 refreshUser,
                 loading,
-                isAuthenticated,
+                isAuthenticated: Boolean(token),
                 login,
                 logout,
             }}

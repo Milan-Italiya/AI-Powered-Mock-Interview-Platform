@@ -20,67 +20,32 @@ export const updateProfileDatasource = async (data) => {
 
     const formData = new FormData();
 
-    // Only append fields that are actually provided
-    if (data.fullName !== undefined) {
-        formData.append("fullName", data.fullName);
-    }
+    const appendField = (key, value) => {
+        if (value === undefined || value === null) return;
 
-    if (data.bio !== undefined) {
-        formData.append("bio", data.bio);
-    }
+        if (key === "profilePicture") {
+            if (value instanceof File) {
+                formData.append(key, value);
+            }
+            return;
+        }
 
-    if (data.selectedRole !== undefined) {
-        formData.append("selectedRole", data.selectedRole);
-    }
+        if (key === "skills" || key === "learningGoals") {
+            formData.append(
+                key,
+                typeof value === "string"
+                    ? value
+                    : JSON.stringify(value)
+            );
+            return;
+        }
 
-    if (data.experienceLevel !== undefined) {
-        formData.append(
-            "experienceLevel",
-            data.experienceLevel
-        );
-    }
+        formData.append(key, String(value));
+    };
 
-    if (data.targetCompany !== undefined) {
-        formData.append(
-            "targetCompany",
-            data.targetCompany
-        );
-    }
-
-    if (data.skills !== undefined) {
-        formData.append(
-            "skills",
-            JSON.stringify(data.skills)
-        );
-    }
-
-    if (data.learningGoals !== undefined) {
-        formData.append(
-            "learningGoals",
-            JSON.stringify(data.learningGoals)
-        );
-    }
-
-    if (data.preferredDifficulty !== undefined) {
-        formData.append(
-            "preferredDifficulty",
-            data.preferredDifficulty
-        );
-    }
-
-    if (data.preferredInterviewType !== undefined) {
-        formData.append(
-            "preferredInterviewType",
-            data.preferredInterviewType
-        );
-    }
-
-    if (data.profilePicture) {
-        formData.append(
-            "profilePicture",
-            data.profilePicture
-        );
-    }
+    Object.entries(data).forEach(([key, value]) => {
+        appendField(key, value);
+    });
 
     const response = await api.put(
         "/api/v1/users/profile",
@@ -94,6 +59,7 @@ export const updateProfileDatasource = async (data) => {
 
     return response.data;
 };
+
 
 export const removeProfilePictureDatasource = async () => {
     const token = localStorage.getItem("token");

@@ -128,7 +128,7 @@ const revokeBlobUrl = (url) => {
 
 const EditProfile = () => {
     const navigate = useNavigate();
-    const { logout } = useAuth();
+    const { logout, refreshUser } = useAuth();
 
     const [collapsed, setCollapsed] = useState(
         () => localStorage.getItem("sidebar-collapsed") === "true"
@@ -428,66 +428,55 @@ const EditProfile = () => {
         try {
             setSaving(true);
 
-            const fields = {
+            const payload = {
                 fullName,
                 bio: formData.bio.trim(),
                 selectedRole: formData.selectedRole,
                 experienceLevel: formData.experienceLevel,
                 targetCompany: formData.targetCompany.trim(),
-                skills: JSON.stringify(
-                    formData.skills.map((skill) => skill.trim())
-                ),
-                learningGoals: JSON.stringify(
-                    formData.learningGoals.map((goal) => goal.trim())
+                skills: formData.skills.map((skill) => skill.trim()),
+                learningGoals: formData.learningGoals.map((goal) =>
+                    goal.trim()
                 ),
                 preferredDifficulty: formData.preferredDifficulty,
                 preferredInterviewType: formData.preferredInterviewType,
+                profilePicture: profilePicture instanceof File
+                    ? profilePicture
+                    : null,
             };
-
-            let payload;
-
-            if (profilePicture instanceof File) {
-                payload = new FormData();
-
-                Object.entries(fields).forEach(([key, value]) => {
-                    payload.append(key, value);
-                });
-
-                // The backend upload middleware must use this same field name.
-                payload.append("profilePicture", profilePicture);
-            } else {
-                payload = {
-                    ...fields,
-                    skills: formData.skills.map((skill) => skill.trim()),
-                    learningGoals: formData.learningGoals.map((goal) =>
-                        goal.trim()
-                    ),
-                };
-            }
 
             const response = await updateProfile(payload);
 
-            if (response?.success === false || response?.data?.success === false) {
+            if (response?.success === false) {
                 throw new Error(
-                    response?.message ||
-                    response?.data?.message ||
-                    "Failed to update profile."
+                    response.message || "Failed to update profile."
                 );
             }
 
-            // Reload the saved profile so the page uses the persistent image URL.
+            // Fetch the saved profile after the update succeeds.
             const refreshedResponse = await getProfile();
             const refreshedUser = getProfileFromResponse(refreshedResponse);
 
-            if (refreshedUser && typeof refreshedUser === "object") {
-                setFormData(normalizeProfile(refreshedUser));
-                setInitialFormData(normalizeProfile(refreshedUser));
+            if (!refreshedUser || typeof refreshedUser !== "object") {
+                throw new Error(
+                    "Profile was updated, but the latest profile could not be loaded."
+                );
             }
 
+            const normalizedProfile = normalizeProfile(refreshedUser);
+
+            setFormData(normalizedProfile);
+            setInitialFormData(normalizedProfile);
+
+            setProfilePicture(null);
+            setPictureRemoved(false);
+            setProfilePicturePreview(normalizedProfile.profilePicture);
+
+            // Update the shared authentication context.
+            await refreshUser();
+
             toast.success(
-                response?.message ||
-                response?.data?.message ||
-                "Profile updated successfully."
+                response?.message || "Profile updated successfully."
             );
 
             navigate("/profile", { replace: true });
@@ -501,7 +490,6 @@ const EditProfile = () => {
             setSaving(false);
         }
     };
-
 
     /* =====================================================
        LOADING STATE
