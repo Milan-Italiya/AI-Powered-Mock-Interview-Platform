@@ -239,12 +239,29 @@ const EditProfile = () => {
        FORM CHANGE HANDLERS
     ===================================================== */
 
+    // Handles native input/textarea events.
     const handleChange = (event) => {
         const { name, value } = event.target;
 
         setFormData((previous) => ({
             ...previous,
             [name]: value,
+        }));
+    };
+
+    // Handles ThemedSelect values (string or option object), not DOM events.
+    const handleSelectChange = (fieldName, selectedValue) => {
+        const value =
+            typeof selectedValue === "string"
+                ? selectedValue
+                : selectedValue?.target?.value ??
+                  selectedValue?.value ??
+                  selectedValue?.target?.name ??
+                  "";
+
+        setFormData((previous) => ({
+            ...previous,
+            [fieldName]: value.trim(),
         }));
     };
 
@@ -425,14 +442,29 @@ const EditProfile = () => {
             return;
         }
 
+        // These fields use enum validation on the backend, so only submit
+        // exact supported values.
+        const selectedRole = String(formData.selectedRole ?? "").trim();
+        const experienceLevel = String(formData.experienceLevel ?? "").trim();
+
+        if (!ROLE_OPTIONS.some((option) => option.value === selectedRole)) {
+            toast.error("Please select a valid target role.");
+            return;
+        }
+
+        if (!EXPERIENCE_OPTIONS.some((option) => option.value === experienceLevel)) {
+            toast.error("Please select a valid experience level.");
+            return;
+        }
+
         try {
             setSaving(true);
 
             const payload = {
                 fullName,
                 bio: formData.bio.trim(),
-                selectedRole: formData.selectedRole,
-                experienceLevel: formData.experienceLevel,
+                selectedRole,
+                experienceLevel,
                 targetCompany: formData.targetCompany.trim(),
                 skills: formData.skills.map((skill) => skill.trim()),
                 learningGoals: formData.learningGoals.map((goal) =>
@@ -810,7 +842,9 @@ const EditProfile = () => {
                                         <ThemedSelect
                                             name="selectedRole"
                                             value={formData.selectedRole}
-                                            onChange={handleChange}
+                                            onChange={(value) =>
+                                                handleSelectChange("selectedRole", value)
+                                            }
                                             options={ROLE_OPTIONS}
                                             placeholder="Select target role"
                                             icon={Briefcase}
@@ -821,7 +855,9 @@ const EditProfile = () => {
                                         <ThemedSelect
                                             name="experienceLevel"
                                             value={formData.experienceLevel}
-                                            onChange={handleChange}
+                                            onChange={(value) =>
+                                                handleSelectChange("experienceLevel", value)
+                                            }
                                             options={EXPERIENCE_OPTIONS}
                                             placeholder="Select experience"
                                             icon={GraduationCap}
@@ -957,7 +993,9 @@ const EditProfile = () => {
                                             value={
                                                 formData.preferredDifficulty
                                             }
-                                            onChange={handleChange}
+                                            onChange={(value) =>
+                                                handleSelectChange("preferredDifficulty", value)
+                                            }
                                             options={DIFFICULTY_OPTIONS}
                                             placeholder="Select difficulty"
                                             icon={Gauge}
@@ -970,7 +1008,9 @@ const EditProfile = () => {
                                             value={
                                                 formData.preferredInterviewType
                                             }
-                                            onChange={handleChange}
+                                            onChange={(value) =>
+                                                handleSelectChange("preferredInterviewType", value)
+                                            }
                                             options={INTERVIEW_TYPE_OPTIONS}
                                             placeholder="Select interview type"
                                             icon={MessageSquare}
