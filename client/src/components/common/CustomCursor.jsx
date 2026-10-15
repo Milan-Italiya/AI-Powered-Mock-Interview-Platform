@@ -10,47 +10,48 @@ const CustomCursor = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
     const [isClicking, setIsClicking] = useState(false);
+    const [isEnabled, setIsEnabled] = useState(false);
 
     const mouseX = useMotionValue(-100);
     const mouseY = useMotionValue(-100);
 
-    // Fast, precise cursor movement.
+    // Fast, responsive center cursor.
     const cursorX = useSpring(mouseX, {
-        stiffness: 700,
-        damping: 40,
-        mass: 0.15,
+        stiffness: 1200,
+        damping: 55,
+        mass: 0.08,
     });
 
     const cursorY = useSpring(mouseY, {
-        stiffness: 700,
-        damping: 40,
-        mass: 0.15,
+        stiffness: 1200,
+        damping: 55,
+        mass: 0.08,
     });
 
-    // Smooth orbit ring.
+    // Smooth orbit with a subtle trailing effect.
     const ringX = useSpring(mouseX, {
-        stiffness: 220,
-        damping: 25,
-        mass: 0.3,
+        stiffness: 380,
+        damping: 32,
+        mass: 0.16,
     });
 
     const ringY = useSpring(mouseY, {
-        stiffness: 220,
-        damping: 25,
+        stiffness: 380,
+        damping: 32,
+        mass: 0.16,
+    });
+
+    // Slow ambient glow for depth.
+    const glowX = useSpring(mouseX, {
+        stiffness: 150,
+        damping: 28,
         mass: 0.3,
     });
 
-    // Soft ambient glow.
-    const glowX = useSpring(mouseX, {
-        stiffness: 100,
-        damping: 22,
-        mass: 0.5,
-    });
-
     const glowY = useSpring(mouseY, {
-        stiffness: 100,
-        damping: 22,
-        mass: 0.5,
+        stiffness: 150,
+        damping: 28,
+        mass: 0.3,
     });
 
     const centerX = useTransform(cursorX, (value) => value - 4);
@@ -66,6 +67,64 @@ const CustomCursor = () => {
     const accentY = useTransform(ringY, (value) => value - 10);
 
     useEffect(() => {
+        const media = window.matchMedia(
+            "(hover: hover) and (pointer: fine)"
+        );
+
+        const reducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        );
+
+        const updateCursorMode = () => {
+            const enabled =
+                media.matches && !reducedMotion.matches;
+
+            setIsEnabled(enabled);
+
+            document.documentElement.classList.toggle(
+                "synthex-orbit-cursor",
+                enabled
+            );
+
+            if (!enabled) {
+                setIsVisible(false);
+                setIsHovering(false);
+                setIsClicking(false);
+            }
+        };
+
+        updateCursorMode();
+
+        media.addEventListener?.("change", updateCursorMode);
+        reducedMotion.addEventListener?.("change", updateCursorMode);
+
+        return () => {
+            media.removeEventListener?.("change", updateCursorMode);
+            reducedMotion.removeEventListener?.("change", updateCursorMode);
+
+            document.documentElement.classList.remove(
+                "synthex-orbit-cursor"
+            );
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!isEnabled) return;
+
+        const interactiveSelector = [
+            "button",
+            "a",
+            "input",
+            "textarea",
+            "select",
+            "summary",
+            "label",
+            "[role='button']",
+            "[data-cursor='pointer']",
+        ].join(",");
+
+        let currentHoverTarget = null;
+
         const handleMouseMove = (event) => {
             mouseX.set(event.clientX);
             mouseY.set(event.clientY);
@@ -73,21 +132,15 @@ const CustomCursor = () => {
             setIsVisible(true);
 
             const target = event.target;
+            const interactive =
+                target instanceof Element
+                    ? target.closest(interactiveSelector)
+                    : null;
 
-            const interactive = target.closest?.(
-                [
-                    "button",
-                    "a",
-                    "input",
-                    "textarea",
-                    "select",
-                    "summary",
-                    "[role='button']",
-                    "[data-cursor='pointer']",
-                ].join(",")
-            );
-
-            setIsHovering(Boolean(interactive));
+            if (interactive !== currentHoverTarget) {
+                currentHoverTarget = interactive;
+                setIsHovering(Boolean(interactive));
+            }
         };
 
         const handleMouseDown = () => setIsClicking(true);
@@ -105,9 +158,12 @@ const CustomCursor = () => {
             setIsClicking(false);
         };
 
-        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mousemove", handleMouseMove, {
+            passive: true,
+        });
         window.addEventListener("mousedown", handleMouseDown);
         window.addEventListener("mouseup", handleMouseUp);
+        window.addEventListener("blur", handleWindowBlur);
 
         document.documentElement.addEventListener(
             "mouseleave",
@@ -119,12 +175,11 @@ const CustomCursor = () => {
             handleMouseEnter
         );
 
-        window.addEventListener("blur", handleWindowBlur);
-
         return () => {
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mousedown", handleMouseDown);
             window.removeEventListener("mouseup", handleMouseUp);
+            window.removeEventListener("blur", handleWindowBlur);
 
             document.documentElement.removeEventListener(
                 "mouseleave",
@@ -135,34 +190,8 @@ const CustomCursor = () => {
                 "mouseenter",
                 handleMouseEnter
             );
-
-            window.removeEventListener("blur", handleWindowBlur);
         };
-    }, [mouseX, mouseY]);
-
-    useEffect(() => {
-        const media = window.matchMedia(
-            "(hover: hover) and (pointer: fine)"
-        );
-
-        const updateCursorMode = () => {
-            document.documentElement.classList.toggle(
-                "synthex-orbit-cursor",
-                media.matches
-            );
-        };
-
-        updateCursorMode();
-        media.addEventListener?.("change", updateCursorMode);
-
-        return () => {
-            media.removeEventListener?.("change", updateCursorMode);
-
-            document.documentElement.classList.remove(
-                "synthex-orbit-cursor"
-            );
-        };
-    }, []);
+    }, [isEnabled, mouseX, mouseY]);
 
     return (
         <>
@@ -176,6 +205,7 @@ const CustomCursor = () => {
                         html.synthex-orbit-cursor body input,
                         html.synthex-orbit-cursor body textarea,
                         html.synthex-orbit-cursor body select,
+                        html.synthex-orbit-cursor body label,
                         html.synthex-orbit-cursor body [role="button"] {
                             cursor: none !important;
                         }
@@ -194,6 +224,7 @@ const CustomCursor = () => {
                         html.synthex-orbit-cursor body input,
                         html.synthex-orbit-cursor body textarea,
                         html.synthex-orbit-cursor body select,
+                        html.synthex-orbit-cursor body label,
                         html.synthex-orbit-cursor body [role="button"] {
                             cursor: auto !important;
                         }
@@ -201,7 +232,7 @@ const CustomCursor = () => {
                 `}
             </style>
 
-            {/* Ambient AI glow */}
+            {/* Ambient purple glow */}
             <motion.div
                 className="synthex-orbit-cursor-element pointer-events-none fixed left-0 top-0 z-[9997] hidden h-[52px] w-[52px] rounded-full md:block"
                 style={{
@@ -213,35 +244,27 @@ const CustomCursor = () => {
                     willChange: "transform",
                 }}
                 animate={{
-                    scale: isClicking
-                        ? 0.75
-                        : isHovering
-                          ? 1.45
-                          : 1,
-                    opacity: isVisible
-                        ? isHovering
-                            ? 0.95
-                            : 0.65
-                        : 0,
+                    scale: isClicking ? 0.8 : isHovering ? 1.4 : 1,
+                    opacity: isVisible ? (isHovering ? 0.95 : 0.65) : 0,
                 }}
                 transition={{
                     scale: {
                         type: "spring",
-                        stiffness: 250,
-                        damping: 20,
+                        stiffness: 220,
+                        damping: 24,
                     },
-                    opacity: { duration: 0.2 },
+                    opacity: { duration: 0.18 },
                 }}
             />
 
-            {/* Circular orbit */}
+            {/* Orbit ring */}
             <motion.div
                 className="synthex-orbit-cursor-element pointer-events-none fixed left-0 top-0 z-[9998] hidden h-[30px] w-[30px] rounded-full border md:block"
                 style={{
                     x: ringLeft,
                     y: ringTop,
                     borderColor: isHovering
-                        ? "rgba(217,70,239,0.9)"
+                        ? "rgba(217,70,239,0.95)"
                         : "rgba(167,139,250,0.7)",
                     background:
                         "linear-gradient(135deg, rgba(139,92,246,0.06), rgba(217,70,239,0.03))",
@@ -251,24 +274,20 @@ const CustomCursor = () => {
                     willChange: "transform",
                 }}
                 animate={{
-                    scale: isClicking
-                        ? 0.8
-                        : isHovering
-                          ? 1.4
-                          : 1,
+                    scale: isClicking ? 0.82 : isHovering ? 1.35 : 1,
                     opacity: isVisible ? 1 : 0,
                 }}
                 transition={{
                     scale: {
                         type: "spring",
-                        stiffness: 260,
-                        damping: 22,
+                        stiffness: 300,
+                        damping: 25,
                     },
-                    opacity: { duration: 0.18 },
+                    opacity: { duration: 0.15 },
                 }}
             />
 
-            {/* Orbit accent */}
+            {/* Floating orbit accent */}
             <motion.div
                 className="synthex-orbit-cursor-element pointer-events-none fixed left-0 top-0 z-[9999] hidden h-[7px] w-[7px] rounded-full md:block"
                 style={{
@@ -286,14 +305,14 @@ const CustomCursor = () => {
                 transition={{
                     scale: {
                         type: "spring",
-                        stiffness: 250,
-                        damping: 18,
+                        stiffness: 300,
+                        damping: 22,
                     },
-                    opacity: { duration: 0.15 },
+                    opacity: { duration: 0.12 },
                 }}
             />
 
-            {/* Center diamond */}
+            {/* Responsive center cursor */}
             <motion.div
                 className="synthex-orbit-cursor-element pointer-events-none fixed left-0 top-0 z-[10000] hidden h-2 w-2 rounded-[2px] md:block"
                 style={{
@@ -307,20 +326,16 @@ const CustomCursor = () => {
                 }}
                 animate={{
                     rotate: 45,
-                    scale: isClicking
-                        ? 1.7
-                        : isHovering
-                          ? 0.75
-                          : 1,
+                    scale: isClicking ? 1.6 : isHovering ? 0.8 : 1,
                     opacity: isVisible ? 1 : 0,
                 }}
                 transition={{
                     scale: {
                         type: "spring",
-                        stiffness: 400,
-                        damping: 22,
+                        stiffness: 450,
+                        damping: 26,
                     },
-                    opacity: { duration: 0.12 },
+                    opacity: { duration: 0.1 },
                 }}
             />
         </>
