@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
@@ -121,15 +122,12 @@ const normalizeProfile = (user = {}) => ({
     selectedRole: user?.selectedRole ?? "",
     experienceLevel: user?.experienceLevel ?? "",
     targetCompany: user?.targetCompany ?? "",
-    skills: Array.isArray(user?.skills)
-        ? [...user.skills]
-        : [],
+    skills: Array.isArray(user?.skills) ? [...user.skills] : [],
     learningGoals: Array.isArray(user?.learningGoals)
         ? [...user.learningGoals]
         : [],
     preferredDifficulty: user?.preferredDifficulty || "Medium",
-    preferredInterviewType:
-        user?.preferredInterviewType || "Mixed",
+    preferredInterviewType: user?.preferredInterviewType || "Mixed",
 });
 
 const revokeBlobUrl = (url) => {
@@ -275,8 +273,8 @@ const EditProfile = () => {
             typeof selectedValue === "string"
                 ? selectedValue
                 : selectedValue?.value ??
-                selectedValue?.target?.value ??
-                "";
+                  selectedValue?.target?.value ??
+                  "";
 
         setFormData((previous) => ({
             ...previous,
@@ -313,7 +311,7 @@ const EditProfile = () => {
     const handleProfilePictureChange = (event) => {
         const file = event.target.files?.[0];
 
-        // Permit choosing the same image again.
+        // Allow selecting the same image again.
         event.target.value = "";
 
         if (!file) return;
@@ -345,11 +343,8 @@ const EditProfile = () => {
             setRemovingPicture(true);
 
             /*
-             * If the user selected a new image, discard that selection
-             * without deleting the previously saved server image.
-             *
-             * If there is a saved image and no new local selection,
-             * call the existing API to remove the saved image.
+             * Discard a newly selected image locally.
+             * Otherwise, remove the existing server image.
              */
             if (hasSavedPicture && !hasNewPicture) {
                 const response = await removeProfilePicture();
@@ -357,7 +352,7 @@ const EditProfile = () => {
                 if (response?.success === false) {
                     throw new Error(
                         response?.message ||
-                        "Failed to remove profile picture."
+                            "Failed to remove profile picture."
                     );
                 }
             }
@@ -376,9 +371,9 @@ const EditProfile = () => {
             setInitialFormData((previous) =>
                 previous
                     ? {
-                        ...previous,
-                        profilePicture: "",
-                    }
+                          ...previous,
+                          profilePicture: "",
+                      }
                     : previous
             );
 
@@ -562,7 +557,7 @@ const EditProfile = () => {
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (saving || !hasChanges) return;
+        if (saving || removingPicture || !hasChanges) return;
 
         if (!validateForm()) return;
 
@@ -597,11 +592,6 @@ const EditProfile = () => {
                 );
             }
 
-            /*
-             * The update has succeeded at this point.
-             * A subsequent refresh failure should not tell the user
-             * that the profile update itself failed.
-             */
             toast.success(
                 response?.message || "Profile updated successfully."
             );
@@ -864,8 +854,8 @@ const EditProfile = () => {
                                                     .trim()
                                                     .charAt(0)
                                                     .toUpperCase() || (
-                                                        <User size={30} />
-                                                    )}
+                                                    <User size={30} />
+                                                )}
                                             </span>
                                         )}
                                     </div>
@@ -890,7 +880,9 @@ const EditProfile = () => {
                                                     onChange={
                                                         handleProfilePictureChange
                                                     }
-                                                    disabled={saving || removingPicture}
+                                                    disabled={
+                                                        saving || removingPicture
+                                                    }
                                                     className="sr-only"
                                                 />
                                             </label>
@@ -903,7 +895,9 @@ const EditProfile = () => {
                                                             true
                                                         )
                                                     }
-                                                    disabled={saving || removingPicture}
+                                                    disabled={
+                                                        saving || removingPicture
+                                                    }
                                                     className="inline-flex items-center gap-2 rounded-xl border border-red-400/10 bg-red-500/[0.05] px-3.5 py-2.5 text-xs font-medium text-red-400 transition hover:bg-red-500/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <Trash2 size={15} />
@@ -922,7 +916,7 @@ const EditProfile = () => {
                                 title="Basic Information"
                                 description="Manage your personal account details."
                             >
-                                <div className="grid grid-cols-1 gap-5">
+                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                     <FormField
                                         label="Full Name"
                                         required
@@ -960,6 +954,7 @@ const EditProfile = () => {
 
                                             <input
                                                 type="email"
+                                                name="email"
                                                 value={formData.email}
                                                 disabled
                                                 readOnly
@@ -969,40 +964,42 @@ const EditProfile = () => {
                                         </div>
                                     </FormField>
 
-                                    <FormField
-                                        label="Bio"
-                                        hint="Write a short, professional introduction."
-                                        trailing={
-                                            <span
-                                                className={
-                                                    formData.bio.length >=
+                                    <div className="sm:col-span-2">
+                                        <FormField
+                                            label="Bio"
+                                            hint="Write a short, professional introduction."
+                                            trailing={
+                                                <span
+                                                    className={
+                                                        formData.bio.length >=
                                                         MAX_BIO_LENGTH
-                                                        ? "text-amber-400"
-                                                        : "text-zinc-600"
-                                                }
-                                            >
-                                                {formData.bio.length}/
-                                                {MAX_BIO_LENGTH}
-                                            </span>
-                                        }
-                                    >
-                                        <div className="relative">
-                                            <FileText
-                                                size={17}
-                                                className="pointer-events-none absolute left-4 top-4 text-zinc-600"
-                                            />
+                                                            ? "text-amber-400"
+                                                            : "text-zinc-600"
+                                                    }
+                                                >
+                                                    {formData.bio.length}/
+                                                    {MAX_BIO_LENGTH}
+                                                </span>
+                                            }
+                                        >
+                                            <div className="relative">
+                                                <FileText
+                                                    size={17}
+                                                    className="pointer-events-none absolute left-4 top-4 text-zinc-600"
+                                                />
 
-                                            <textarea
-                                                name="bio"
-                                                value={formData.bio}
-                                                onChange={handleChange}
-                                                rows={4}
-                                                maxLength={MAX_BIO_LENGTH}
-                                                placeholder="Tell us about yourself..."
-                                                className={`${inputClass("pl-11")} min-h-28 resize-y leading-6`}
-                                            />
-                                        </div>
-                                    </FormField>
+                                                <textarea
+                                                    name="bio"
+                                                    value={formData.bio}
+                                                    onChange={handleChange}
+                                                    rows={4}
+                                                    maxLength={MAX_BIO_LENGTH}
+                                                    placeholder="Tell us about yourself..."
+                                                    className={`${inputClass("pl-11")} min-h-28 resize-y leading-6`}
+                                                />
+                                            </div>
+                                        </FormField>
+                                    </div>
                                 </div>
                             </FormSection>
 
@@ -1013,7 +1010,7 @@ const EditProfile = () => {
                                 title="Career Profile"
                                 description="Set your target role and career direction."
                             >
-                                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                     <FormField label="Target Role">
                                         <ThemedSelect
                                             name="selectedRole"
@@ -1046,7 +1043,7 @@ const EditProfile = () => {
                                         />
                                     </FormField>
 
-                                    <div className="md:col-span-2">
+                                    <div className="sm:col-span-2">
                                         <FormField label="Target Company">
                                             <div className="relative">
                                                 <Target
@@ -1162,7 +1159,7 @@ const EditProfile = () => {
                                 title="Interview Preferences"
                                 description="Customize your preferred mock interview experience."
                             >
-                                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                     <FormField label="Preferred Difficulty">
                                         <ThemedSelect
                                             name="preferredDifficulty"
@@ -1216,7 +1213,11 @@ const EditProfile = () => {
 
                             <button
                                 type="submit"
-                                disabled={saving || removingPicture || !hasChanges}
+                                disabled={
+                                    saving ||
+                                    removingPicture ||
+                                    !hasChanges
+                                }
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-950/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
                             >
                                 {saving ? (
@@ -1279,8 +1280,9 @@ const PageLayout = ({
         />
 
         <motion.main
-            className={`min-h-screen min-w-0 overflow-x-hidden pt-16 transition-[margin-left] duration-300 ease-in-out md:pt-0 ${collapsed ? "md:ml-20" : "md:ml-[260px]"
-                }`}
+            className={`min-h-screen min-w-0 overflow-x-hidden pt-16 transition-[margin-left] duration-300 ease-in-out md:pt-0 ${
+                collapsed ? "md:ml-20" : "md:ml-[260px]"
+            }`}
         >
             {children}
         </motion.main>
@@ -1331,7 +1333,7 @@ const FormField = ({
 }) => (
     <div className="min-w-0">
         <div className="mb-2 flex items-center justify-between gap-3">
-            <label className="block text-sm text-zinc-400">
+            <label className="block text-sm font-medium text-zinc-400">
                 {label}
 
                 {required && (
@@ -1353,11 +1355,24 @@ const FormField = ({
 );
 
 /* =========================================================
-   INPUT STYLE
+   SHARED INPUT STYLE
 ========================================================= */
 
 const inputClass = (extra = "") =>
-    `w-full min-w-0 rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-700 focus:border-violet-500/50 focus:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-60 ${extra}`;
+    `block w-full min-w-0 min-h-12 rounded-xl
+    border border-white/[0.08]
+    bg-white/[0.025]
+    px-4 py-3
+    text-sm font-normal text-white
+    outline-none transition-all duration-200
+    placeholder:text-zinc-600
+    hover:border-white/[0.12]
+    focus:border-violet-500/50
+    focus:bg-white/[0.04]
+    focus:ring-2 focus:ring-violet-500/10
+    disabled:cursor-not-allowed
+    disabled:opacity-60
+    ${extra}`;
 
 /* =========================================================
    LIST EDITOR
@@ -1380,8 +1395,9 @@ const ListEditor = ({
             aria-label={placeholder}
         />
 
-        <p className="mt-2 text-xs text-zinc-600">
-            Press Enter to add an item. Maximum {MAX_LIST_ITEM_LENGTH} characters per item.
+        <p className="mt-2 text-xs leading-5 text-zinc-600">
+            Press Enter to add an item. Maximum{" "}
+            {MAX_LIST_ITEM_LENGTH} characters per item.
         </p>
 
         {items.length > 0 ? (
