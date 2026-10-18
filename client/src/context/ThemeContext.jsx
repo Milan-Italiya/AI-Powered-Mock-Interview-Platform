@@ -1,21 +1,26 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+    createContext,
+    useContext,
+    useEffect,
+    useState,
+} from "react";
 
-const ThemeContext = createContext(null)
+const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useState(() => {
         try {
             const savedTheme = localStorage.getItem("synthex-theme");
 
-            if (savedTheme === "Light" || savedTheme === "dark") {
+            if (savedTheme === "light" || savedTheme === "dark") {
                 return savedTheme;
             }
         } catch (error) {
-            console.error("Could not read saved theme: ", error)
+            console.error("Could not read saved theme:", error);
         }
+
         return "dark";
     });
-
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
@@ -23,27 +28,38 @@ export const ThemeProvider = ({ children }) => {
         try {
             localStorage.setItem("synthex-theme", theme);
         } catch (error) {
-            console.error("Could not save theme: ", error)
+            console.error("Could not save theme:", error);
         }
-    }, [theme])
+    }, [theme]);
 
     const toggleTheme = () => {
-        setTheme((curTheme) => {
-            curTheme === "dark" ? "light" : "dark";
-        })
-    }
+        setTheme((currentTheme) =>
+            currentTheme === "dark" ? "light" : "dark"
+        );
+    };
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, isDark: theme === "dark" }}>
+        <ThemeContext.Provider
+            value={{
+                theme,
+                setTheme,
+                toggleTheme,
+                isDark: theme === "dark",
+            }}
+        >
             {children}
         </ThemeContext.Provider>
-    )
-}
+    );
+};
 
 export const useTheme = () => {
     const context = useContext(ThemeContext);
 
     if (!context) {
-        throw new Error ("useTheme must be used inside ThemeProvider.");
+        throw new Error(
+            "useTheme must be used inside ThemeProvider."
+        );
     }
-}
+
+    return context;
+};

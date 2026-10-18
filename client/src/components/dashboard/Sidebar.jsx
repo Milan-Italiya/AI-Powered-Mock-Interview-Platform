@@ -189,17 +189,14 @@ const Sidebar = ({
                                 type="button"
                                 onClick={toggleTheme}
                                 aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-                                className="flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] px-3 py-2.5 text-sm text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
+                                title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+                                className="ml-auto flex shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-secondary)] p-2 text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
                             >
                                 {theme === "dark" ? (
                                     <Sun className="h-4 w-4" />
                                 ) : (
                                     <Moon className="h-4 w-4" />
                                 )}
-
-                                <span>
-                                    {theme === "dark" ? "Light theme" : "Dark theme"}
-                                </span>
                             </button>
 
                             <button
