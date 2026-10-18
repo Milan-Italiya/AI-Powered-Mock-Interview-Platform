@@ -285,19 +285,6 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                 </div>
                             </div>
 
-                            {/* THEME TOGGLE */}
-                            <motion.button
-                                type="button"
-                                onClick={toggleTheme}
-                                whileTap={{ scale: 0.92 }}
-                                aria-label={`Switch to ${themeLabel.toLowerCase()}`}
-                                aria-pressed={!isDark}
-                                title={themeLabel}
-                                className="relative ml-1 mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-violet-500 transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                            >
-                                <ThemeIcon size={18} strokeWidth={1.8} />
-                            </motion.button>
-
                             {/* CLOSE BUTTON */}
                             <button
                                 type="button"
@@ -335,6 +322,35 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                 )}
                             </nav>
                         </div>
+
+
+                        {/* MOBILE THEME TOGGLE */}
+
+                        <div className="shrink-0 border-t border-[var(--border)] p-3">
+                            <motion.button
+                                type="button"
+                                onClick={toggleTheme}
+                                whileTap={{ scale: 0.97 }}
+                                aria-label={`Switch to ${themeLabel.toLowerCase()}`}
+                                aria-pressed={!isDark}
+                                className="flex min-h-11 w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] px-3 py-3 text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                            >
+                                <ThemeIcon
+                                    size={19}
+                                    strokeWidth={1.8}
+                                    className="shrink-0 text-violet-500"
+                                />
+
+                                <span className="flex-1 text-left text-sm font-medium">
+                                    {themeLabel}
+                                </span>
+
+                                <span className="rounded-lg bg-violet-500/10 px-2 py-1 text-xs font-medium text-violet-500">
+                                    {isDark ? "Dark" : "Light"}
+                                </span>
+                            </motion.button>
+                        </div>
+
 
                         {/* MOBILE LOGOUT */}
 

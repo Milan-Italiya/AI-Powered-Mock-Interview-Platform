@@ -16,10 +16,27 @@ import errorMiddleware from "./middlewares/error.middleware.js"
 
 const app = express();
 
-app.use(cors({
-    origin: process.env.CLIENT_URL,
-    credentials: true
-}))
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://ai-powered-mock-interview-platform-neon.vercel.app",
+];
+
+app.use(
+    cors({
+        origin: function (origin, callback) {
+            // Allow requests without an Origin header,
+            // such as certain server-to-server requests.
+            if (!origin || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+            return callback(new Error("Not allowed by CORS"));
+        },
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+    })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
