@@ -185,19 +185,6 @@ const Sidebar = ({
                                     Interview Intelligence
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={toggleTheme}
-                                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-                                title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-                                className="ml-auto flex shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-secondary)] p-2 text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
-                            >
-                                {theme === "dark" ? (
-                                    <Sun className="h-4 w-4" />
-                                ) : (
-                                    <Moon className="h-4 w-4" />
-                                )}
-                            </button>
 
                             <button
                                 onClick={() => setMobileOpen(false)}
