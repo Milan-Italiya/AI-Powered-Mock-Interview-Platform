@@ -10,14 +10,17 @@ import {
     LayoutDashboard,
     LogOut,
     Menu,
+    Moon,
     Settings,
     Sparkles,
+    Sun,
     Target,
     User,
     X,
 } from "lucide-react";
 
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTheme } from "../../context/ThemeContext.jsx";
 
 const Sidebar = ({
     collapsed,
@@ -26,6 +29,7 @@ const Sidebar = ({
 }) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { theme, toggleTheme } = useTheme();
 
     const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -181,6 +185,22 @@ const Sidebar = ({
                                     Interview Intelligence
                                 </div>
                             </div>
+                            <button
+                                type="button"
+                                onClick={toggleTheme}
+                                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+                                className="flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] px-3 py-2.5 text-sm text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
+                            >
+                                {theme === "dark" ? (
+                                    <Sun className="h-4 w-4" />
+                                ) : (
+                                    <Moon className="h-4 w-4" />
+                                )}
+
+                                <span>
+                                    {theme === "dark" ? "Light theme" : "Dark theme"}
+                                </span>
+                            </button>
 
                             <button
                                 onClick={() => setMobileOpen(false)}
@@ -213,11 +233,10 @@ const Sidebar = ({
                                             }
                                             whileHover={{ x: 3 }}
                                             whileTap={{ scale: 0.98 }}
-                                            className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${
-                                                active
-                                                    ? "bg-violet-500/10 text-violet-300"
-                                                    : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                                            }`}
+                                            className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${active
+                                                ? "bg-violet-500/10 text-violet-300"
+                                                : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
+                                                }`}
                                         >
                                             {active && (
                                                 <motion.div
@@ -260,11 +279,10 @@ const Sidebar = ({
                                             }
                                             whileHover={{ x: 3 }}
                                             whileTap={{ scale: 0.98 }}
-                                            className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${
-                                                active
-                                                    ? "bg-violet-500/10 text-violet-300"
-                                                    : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                                            }`}
+                                            className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${active
+                                                ? "bg-violet-500/10 text-violet-300"
+                                                : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
+                                                }`}
                                         >
                                             {active && (
                                                 <motion.div
@@ -411,11 +429,10 @@ const Sidebar = ({
                                         x: collapsed ? 0 : 3,
                                     }}
                                     whileTap={{ scale: 0.98 }}
-                                    className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${
-                                        active
-                                            ? "bg-violet-500/10 text-violet-300"
-                                            : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                                    }`}
+                                    className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${active
+                                        ? "bg-violet-500/10 text-violet-300"
+                                        : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
+                                        }`}
                                 >
                                     {active && (
                                         <motion.div
@@ -468,11 +485,10 @@ const Sidebar = ({
                                         x: collapsed ? 0 : 3,
                                     }}
                                     whileTap={{ scale: 0.98 }}
-                                    className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${
-                                        active
-                                            ? "bg-violet-500/10 text-violet-300"
-                                            : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                                    }`}
+                                    className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${active
+                                        ? "bg-violet-500/10 text-violet-300"
+                                        : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
+                                        }`}
                                 >
                                     {active && (
                                         <motion.div

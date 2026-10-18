@@ -52,29 +52,29 @@ button {
 ========================================================= */
 
 .synthex-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(139, 92, 246, 0.45) transparent;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.45) transparent;
 }
 
 .synthex-scrollbar::-webkit-scrollbar {
-    width: 5px;
+  width: 5px;
 }
 
 .synthex-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+  background: transparent;
 }
 
 .synthex-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.4);
-    border-radius: 9999px;
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 9999px;
 }
 
 .synthex-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(167, 139, 250, 0.7);
+  background: rgba(167, 139, 250, 0.7);
 }
 
 .synthex-scrollbar::-webkit-scrollbar-corner {
-    background: transparent;
+  background: transparent;
 }
 
 /* =========================================================
@@ -113,18 +113,66 @@ html::-webkit-scrollbar-corner {
    ========================================================= */
 
 @media (min-width: 768px) {
-    html,
-    body,
-    #root {
-        cursor: none;
-    }
+  html,
+  body,
+  #root {
+    cursor: none;
+  }
 
-    button,
-    a,
-    input,
-    textarea,
-    select,
-    [role="button"] {
-        cursor: none;
-    }
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"] {
+    cursor: none;
+  }
+}
+
+:root {
+  color-scheme: dark;
+
+  --app-bg: #05050a;
+  --surface: #0b0b12;
+  --surface-secondary: #101019;
+  --surface-hover: #171522;
+  --border: rgba(255, 255, 255, 0.08);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --input-bg: #101019;
+  --shadow-color: rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --app-bg: #f6f5fb;
+  --surface: #ffffff;
+  --surface-secondary: #f0eef7;
+  --surface-hover: #e9e5f3;
+  --border: rgba(38, 26, 64, 0.12);
+  --text-primary: #1b1730;
+  --text-secondary: #514965;
+  --text-muted: #777087;
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --input-bg: #ffffff;
+  --shadow-color: rgba(38, 26, 64, 0.08);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--text-primary);
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
 }
