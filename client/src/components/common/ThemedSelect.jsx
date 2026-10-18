@@ -268,8 +268,8 @@ const ThemedSelect = ({
                         items-center
                         rounded-xl
                         border
-                        border-white/10
-                        bg-[#151519]
+                        border-purple-500/15
+                        bg-[#11101a]
                         py-3
                         text-left
                         text-sm
@@ -283,9 +283,9 @@ const ThemedSelect = ({
                             : "px-4 pr-10"
                         }
 
-                        ${open
-                            ? "border-purple-500/60 bg-[#17151d] shadow-[0_0_0_1px_rgba(168,85,247,0.15)]"
-                            : "hover:border-white/15 hover:bg-[#17151d]"
+                       ${open
+                            ? "border-purple-500/50 bg-[#171321] shadow-[0_0_0_1px_rgba(139,92,246,0.12)]"
+                            : "hover:border-purple-500/25 hover:bg-[#171321]"
                         }
                     `}
                 >
@@ -367,11 +367,11 @@ const ThemedSelect = ({
                                     relative
                                     rounded-xl
                                     border
-                                    border-white/[0.08]
-                                    bg-[#0d0d12]/95
+                                    border-purple-500/20
+                                    bg-[#100e19]/[98]
                                     p-1.5
                                     shadow-2xl
-                                    shadow-black/50
+                                    shadow-purple-950/30
                                     backdrop-blur-xl
                                 "
                             >
@@ -388,7 +388,7 @@ const ThemedSelect = ({
                                         -translate-x-1/2
                                         -translate-y-1/2
                                         rounded-full
-                                        bg-purple-600/10
+                                        bg-purple-600/15
                                         blur-3xl
                                     "
                                 />
@@ -429,9 +429,9 @@ const ThemedSelect = ({
                                                         transition-all
                                                         duration-150
 
-                                                        ${isSelected
-                                                            ? "bg-gradient-to-r from-purple-600/20 to-fuchsia-600/15 text-white"
-                                                            : "text-gray-400 hover:bg-white/[0.05] hover:text-white"
+                                                       ${isSelected
+                                                            ? "bg-gradient-to-r from-violet-600/25 to-fuchsia-600/15 text-white"
+                                                            : "text-gray-400 hover:bg-violet-500/[0.10] hover:text-white"
                                                         }
                                                     `}
                                                 >
@@ -446,7 +446,7 @@ const ThemedSelect = ({
                                                             size={
                                                                 16
                                                             }
-                                                            className="text-purple-400"
+                                                            className="text-violet-400"
                                                         />
                                                     )}
                                                 </button>
