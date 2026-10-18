@@ -22,18 +22,18 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext.jsx";
 
-const Sidebar = ({
-    collapsed,
-    setCollapsed,
-    onLogout,
-}) => {
+const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
 
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    // Lock background scrolling while the mobile sidebar is open.
+    const isDark = theme === "dark";
+
+    const themeLabel = isDark ? "Light theme" : "Dark theme";
+    const ThemeIcon = isDark ? Sun : Moon;
+
     useEffect(() => {
         if (!mobileOpen) return;
 
@@ -55,10 +55,15 @@ const Sidebar = ({
         const newState = !collapsed;
 
         setCollapsed(newState);
-        localStorage.setItem(
-            "sidebar-collapsed",
-            String(newState)
-        );
+
+        try {
+            localStorage.setItem(
+                "sidebar-collapsed",
+                String(newState)
+            );
+        } catch (error) {
+            console.error("Could not save sidebar state:", error);
+        }
     };
 
     const handleNavigation = (path) => {
@@ -112,21 +117,116 @@ const Sidebar = ({
         },
     ];
 
+    const getItemClasses = (active) =>
+        `group relative flex w-full items-center rounded-xl px-3 py-3 transition-colors ${
+            active
+                ? "bg-violet-500/10 text-violet-500"
+                : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+        }`;
+
+    const renderNavigationItems = (items, layoutId) =>
+        items.map((item) => {
+            const Icon = item.icon;
+            const active = location.pathname === item.path;
+
+            return (
+                <motion.button
+                    key={item.label}
+                    type="button"
+                    onClick={() => handleNavigation(item.path)}
+                    whileHover={{ x: 3 }}
+                    whileTap={{ scale: 0.98 }}
+                    aria-current={active ? "page" : undefined}
+                    title={collapsed ? item.label : undefined}
+                    className={getItemClasses(active)}
+                >
+                    {active && (
+                        <motion.div
+                            layoutId={layoutId}
+                            className="absolute left-0 h-6 w-0.5 rounded-full bg-violet-500"
+                        />
+                    )}
+
+                    <Icon
+                        size={19}
+                        strokeWidth={1.7}
+                        className="shrink-0"
+                    />
+
+                    <span
+                        className={`ml-3 text-sm ${
+                            collapsed ? "md:hidden" : ""
+                        }`}
+                    >
+                        {item.label}
+                    </span>
+
+                    {collapsed && (
+                        <span className="pointer-events-none absolute left-16 z-[80] hidden whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-primary)] opacity-0 shadow-xl transition-opacity group-hover:opacity-100 md:block">
+                            {item.label}
+                        </span>
+                    )}
+                </motion.button>
+            );
+        });
+
+    const renderThemeToggle = (isMobile = false) => (
+        <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileTap={{ scale: 0.96 }}
+            aria-label={`Switch to ${themeLabel.toLowerCase()}`}
+            aria-pressed={!isDark}
+            title={themeLabel}
+            className={`group relative flex items-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                isMobile
+                    ? "h-9 w-9 shrink-0 justify-center"
+                    : collapsed
+                      ? "mx-auto h-10 w-10 justify-center"
+                      : "w-full gap-3 px-3 py-3"
+            }`}
+        >
+            <ThemeIcon
+                size={19}
+                strokeWidth={1.8}
+                className="shrink-0 text-violet-500"
+            />
+
+            {!isMobile && !collapsed && (
+                <>
+                    <span className="flex-1 text-left text-sm">
+                        {themeLabel}
+                    </span>
+
+                    <span className="text-xs text-[var(--text-muted)]">
+                        {isDark ? "Dark" : "Light"}
+                    </span>
+                </>
+            )}
+
+            {!isMobile && collapsed && (
+                <span className="pointer-events-none absolute left-14 z-[80] hidden whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-primary)] opacity-0 shadow-xl transition-opacity group-hover:opacity-100 md:block">
+                    {themeLabel}
+                </span>
+            )}
+        </motion.button>
+    );
+
     return (
         <>
             {/* MOBILE MENU BUTTON */}
 
             <button
+                type="button"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open navigation menu"
                 aria-expanded={mobileOpen}
-                className="fixed left-4 top-4 z-[60] flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#11111a]/95 text-zinc-400 shadow-lg backdrop-blur-xl transition-colors hover:text-white md:hidden"
+                className="fixed left-4 top-4 z-[60] flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] shadow-lg backdrop-blur-xl transition-colors hover:bg-[var(--surface-hover)] md:hidden"
             >
                 <Menu size={20} />
             </button>
 
-            {/* MOBILE OVERLAY
-                Fixed to the viewport, independent of sidebar scrolling. */}
+            {/* MOBILE OVERLAY */}
 
             <AnimatePresence>
                 {mobileOpen && (
@@ -152,157 +252,86 @@ const Sidebar = ({
                             duration: 0.3,
                             ease: "easeInOut",
                         }}
-                        className="fixed inset-y-0 left-0 z-[70] flex h-screen h-dvh min-h-0 w-[260px] flex-col overflow-hidden border-r border-white/[0.07] bg-[#08080f] shadow-2xl md:hidden"
+                        className="fixed inset-y-0 left-0 z-[70] flex h-screen h-dvh min-h-0 w-[260px] flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)] shadow-2xl md:hidden"
                     >
-                        {/* MOBILE LOGO */}
+                        {/* MOBILE HEADER */}
 
-                        <div className="relative flex h-20 shrink-0 items-center border-b border-white/[0.07] px-5">
+                        <div className="flex h-20 shrink-0 items-center gap-3 border-b border-[var(--border)] px-4">
                             <motion.div
-                                whileHover={{
-                                    rotate: 5,
-                                    scale: 1.05,
-                                }}
-                                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-400/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
+                                whileHover={{ rotate: 5, scale: 1.05 }}
+                                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
                             >
                                 <div className="absolute inset-0 rounded-xl bg-violet-500/20 blur-lg" />
 
                                 <Sparkles
                                     size={20}
                                     strokeWidth={1.6}
-                                    className="relative text-violet-300"
+                                    className="relative text-violet-500"
                                 />
                             </motion.div>
 
-                            <div className="ml-3 min-w-0">
-                                <div className="whitespace-nowrap text-lg font-semibold tracking-tight">
+                            <div className="min-w-0 flex-1">
+                                <div className="whitespace-nowrap text-lg font-semibold tracking-tight text-[var(--text-primary)]">
                                     Synthex{" "}
-                                    <span className="bg-gradient-to-r from-violet-300 to-fuchsia-400 bg-clip-text text-transparent">
+                                    <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
                                         AI
                                     </span>
                                 </div>
 
-                                <div className="whitespace-nowrap text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+                                <div className="whitespace-nowrap text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)]">
                                     Interview Intelligence
                                 </div>
                             </div>
 
+                            {renderThemeToggle(true)}
+
                             <button
+                                type="button"
                                 onClick={() => setMobileOpen(false)}
                                 aria-label="Close navigation menu"
-                                className="ml-auto -mt-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-white"
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                             >
                                 <X size={18} />
                             </button>
                         </div>
 
-                        {/* MOBILE NAVIGATION
-                            Only this area scrolls. */}
+                        {/* MOBILE NAVIGATION */}
 
-                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-6">
-                            <div className="mb-3 px-3 text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-600">
+                        <div className="synthex-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-6">
+                            <div className="mb-3 px-3 text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--text-muted)]">
                                 Workspace
                             </div>
 
                             <nav className="space-y-1">
-                                {menuItems.map((item) => {
-                                    const Icon = item.icon;
-                                    const active =
-                                        location.pathname === item.path;
-
-                                    return (
-                                        <motion.button
-                                            key={item.label}
-                                            onClick={() =>
-                                                handleNavigation(item.path)
-                                            }
-                                            whileHover={{ x: 3 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${active
-                                                ? "bg-violet-500/10 text-violet-300"
-                                                : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                                                }`}
-                                        >
-                                            {active && (
-                                                <motion.div
-                                                    layoutId="activeSidebarMobile"
-                                                    className="absolute left-0 h-6 w-0.5 rounded-full bg-violet-400"
-                                                />
-                                            )}
-
-                                            <Icon
-                                                size={19}
-                                                strokeWidth={1.7}
-                                                className="shrink-0"
-                                            />
-
-                                            <span className="ml-3 text-sm">
-                                                {item.label}
-                                            </span>
-                                        </motion.button>
-                                    );
-                                })}
+                                {renderNavigationItems(
+                                    menuItems,
+                                    "activeSidebarMobile"
+                                )}
                             </nav>
 
-                            {/* ACCOUNT */}
-
-                            <div className="mb-3 mt-8 px-3 text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-600">
+                            <div className="mb-3 mt-8 px-3 text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--text-muted)]">
                                 Account
                             </div>
 
                             <nav className="space-y-1">
-                                {bottomItems.map((item) => {
-                                    const Icon = item.icon;
-                                    const active =
-                                        location.pathname === item.path;
-
-                                    return (
-                                        <motion.button
-                                            key={item.label}
-                                            onClick={() =>
-                                                handleNavigation(item.path)
-                                            }
-                                            whileHover={{ x: 3 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${active
-                                                ? "bg-violet-500/10 text-violet-300"
-                                                : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                                                }`}
-                                        >
-                                            {active && (
-                                                <motion.div
-                                                    layoutId="activeSidebarMobileAccount"
-                                                    className="absolute left-0 h-6 w-0.5 rounded-full bg-violet-400"
-                                                />
-                                            )}
-
-                                            <Icon
-                                                size={19}
-                                                strokeWidth={1.7}
-                                                className="shrink-0"
-                                            />
-
-                                            <span className="ml-3 text-sm">
-                                                {item.label}
-                                            </span>
-                                        </motion.button>
-                                    );
-                                })}
+                                {renderNavigationItems(
+                                    bottomItems,
+                                    "activeSidebarMobileAccount"
+                                )}
                             </nav>
                         </div>
 
                         {/* MOBILE LOGOUT */}
 
-                        <div className="shrink-0 border-t border-white/[0.07] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                        <div className="shrink-0 border-t border-[var(--border)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                             <motion.button
+                                type="button"
                                 whileHover={{ x: 3 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleLogout}
-                                className="group relative flex w-full items-center rounded-xl px-3 py-3 text-zinc-500 transition-all hover:bg-red-500/10 hover:text-red-300"
+                                className="flex w-full items-center rounded-xl px-3 py-3 text-[var(--text-secondary)] transition-colors hover:bg-red-500/10 hover:text-red-500"
                             >
-                                <LogOut
-                                    size={19}
-                                    strokeWidth={1.7}
-                                />
+                                <LogOut size={19} strokeWidth={1.7} />
 
                                 <span className="ml-3 text-sm">
                                     Logout
@@ -316,54 +345,47 @@ const Sidebar = ({
             {/* DESKTOP SIDEBAR */}
 
             <motion.aside
-                animate={{
-                    width: collapsed ? 80 : 260,
-                }}
+                animate={{ width: collapsed ? 80 : 260 }}
                 transition={{
                     duration: 0.3,
                     ease: "easeInOut",
                 }}
-                className="fixed left-0 top-0 z-50 hidden h-screen flex-col border-r border-white/[0.07] bg-[#08080f]/90 backdrop-blur-2xl md:flex"
+                className="fixed left-0 top-0 z-50 hidden h-screen flex-col border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-2xl md:flex"
             >
-                {/* DESKTOP LOGO */}
+                {/* DESKTOP HEADER */}
 
-                <div className="flex h-20 shrink-0 items-center border-b border-white/[0.07] px-5">
+                <div
+                    className={`flex h-20 shrink-0 items-center border-b border-[var(--border)] ${
+                        collapsed ? "justify-center px-2" : "px-5"
+                    }`}
+                >
                     <motion.div
-                        whileHover={{
-                            rotate: 5,
-                            scale: 1.05,
-                        }}
-                        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-400/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
+                        whileHover={{ rotate: 5, scale: 1.05 }}
+                        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
                     >
                         <div className="absolute inset-0 rounded-xl bg-violet-500/20 blur-lg" />
 
                         <Sparkles
                             size={20}
                             strokeWidth={1.6}
-                            className="relative text-violet-300"
+                            className="relative text-violet-500"
                         />
                     </motion.div>
 
                     {!collapsed && (
                         <motion.div
-                            initial={{
-                                opacity: 0,
-                                x: -10,
-                            }}
-                            animate={{
-                                opacity: 1,
-                                x: 0,
-                            }}
-                            className="ml-3"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="ml-3 min-w-0"
                         >
-                            <div className="text-lg font-semibold tracking-tight">
+                            <div className="whitespace-nowrap text-lg font-semibold tracking-tight text-[var(--text-primary)]">
                                 Synthex{" "}
-                                <span className="bg-gradient-to-r from-violet-300 to-fuchsia-400 bg-clip-text text-transparent">
+                                <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
                                     AI
                                 </span>
                             </div>
 
-                            <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+                            <div className="whitespace-nowrap text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)]">
                                 Interview Intelligence
                             </div>
                         </motion.div>
@@ -373,13 +395,14 @@ const Sidebar = ({
                 {/* COLLAPSE BUTTON */}
 
                 <button
+                    type="button"
                     onClick={handleCollapse}
                     aria-label={
                         collapsed
                             ? "Expand sidebar"
                             : "Collapse sidebar"
                     }
-                    className="absolute -right-3 top-[76px] flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-[#11111a] text-zinc-500 shadow-lg transition-colors hover:text-white"
+                    className="absolute -right-3 top-[76px] flex h-6 w-6 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-secondary)] shadow-lg transition-colors hover:text-[var(--text-primary)]"
                 >
                     {collapsed ? (
                         <ChevronRight size={14} />
@@ -388,137 +411,53 @@ const Sidebar = ({
                     )}
                 </button>
 
-                {/* DESKTOP MAIN MENU */}
+                {/* DESKTOP NAVIGATION */}
 
-                <div className="min-h-0 flex-1 px-3 py-6">
+                <div className="synthex-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-6">
                     {!collapsed && (
-                        <div className="mb-3 px-3 text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-600">
+                        <div className="mb-3 px-3 text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--text-muted)]">
                             Workspace
                         </div>
                     )}
 
                     <nav className="space-y-1">
-                        {menuItems.map((item) => {
-                            const Icon = item.icon;
-                            const active =
-                                location.pathname === item.path;
-
-                            return (
-                                <motion.button
-                                    key={item.label}
-                                    onClick={() =>
-                                        handleNavigation(item.path)
-                                    }
-                                    whileHover={{
-                                        x: collapsed ? 0 : 3,
-                                    }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${active
-                                        ? "bg-violet-500/10 text-violet-300"
-                                        : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                                        }`}
-                                >
-                                    {active && (
-                                        <motion.div
-                                            layoutId="activeSidebar"
-                                            className="absolute left-0 h-6 w-0.5 rounded-full bg-violet-400"
-                                        />
-                                    )}
-
-                                    <Icon
-                                        size={19}
-                                        strokeWidth={1.7}
-                                        className="shrink-0"
-                                    />
-
-                                    {!collapsed && (
-                                        <span className="ml-3 text-sm">
-                                            {item.label}
-                                        </span>
-                                    )}
-
-                                    {collapsed && (
-                                        <span className="pointer-events-none absolute left-16 z-50 whitespace-nowrap rounded-lg border border-white/10 bg-[#15151f] px-3 py-2 text-xs text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
-                                            {item.label}
-                                        </span>
-                                    )}
-                                </motion.button>
-                            );
-                        })}
+                        {renderNavigationItems(
+                            menuItems,
+                            "activeSidebarDesktop"
+                        )}
                     </nav>
 
                     {!collapsed && (
-                        <div className="mb-3 mt-8 px-3 text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-600">
+                        <div className="mb-3 mt-8 px-3 text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--text-muted)]">
                             Account
                         </div>
                     )}
 
                     <nav className="space-y-1">
-                        {bottomItems.map((item) => {
-                            const Icon = item.icon;
-                            const active =
-                                location.pathname === item.path;
-
-                            return (
-                                <motion.button
-                                    key={item.label}
-                                    onClick={() =>
-                                        handleNavigation(item.path)
-                                    }
-                                    whileHover={{
-                                        x: collapsed ? 0 : 3,
-                                    }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className={`group relative flex w-full items-center rounded-xl px-3 py-3 transition-all ${active
-                                        ? "bg-violet-500/10 text-violet-300"
-                                        : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
-                                        }`}
-                                >
-                                    {active && (
-                                        <motion.div
-                                            layoutId="activeSidebar"
-                                            className="absolute left-0 h-6 w-0.5 rounded-full bg-violet-400"
-                                        />
-                                    )}
-
-                                    <Icon
-                                        size={19}
-                                        strokeWidth={1.7}
-                                        className="shrink-0"
-                                    />
-
-                                    {!collapsed && (
-                                        <span className="ml-3 text-sm">
-                                            {item.label}
-                                        </span>
-                                    )}
-
-                                    {collapsed && (
-                                        <span className="pointer-events-none absolute left-16 z-50 whitespace-nowrap rounded-lg border border-white/10 bg-[#15151f] px-3 py-2 text-xs text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
-                                            {item.label}
-                                        </span>
-                                    )}
-                                </motion.button>
-                            );
-                        })}
+                        {renderNavigationItems(
+                            bottomItems,
+                            "activeSidebarDesktopAccount"
+                        )}
                     </nav>
+                </div>
+
+                {/* DESKTOP THEME TOGGLE */}
+
+                <div className="shrink-0 border-t border-[var(--border)] p-3">
+                    {renderThemeToggle(false)}
                 </div>
 
                 {/* DESKTOP LOGOUT */}
 
-                <div className="shrink-0 border-t border-white/[0.07] p-3">
+                <div className="shrink-0 border-t border-[var(--border)] p-3">
                     <motion.button
-                        whileHover={{
-                            x: collapsed ? 0 : 3,
-                        }}
+                        type="button"
+                        whileHover={{ x: collapsed ? 0 : 3 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleLogout}
-                        className="group relative flex w-full items-center rounded-xl px-3 py-3 text-zinc-500 transition-all hover:bg-red-500/10 hover:text-red-300"
+                        className="group relative flex w-full items-center rounded-xl px-3 py-3 text-[var(--text-secondary)] transition-colors hover:bg-red-500/10 hover:text-red-500"
                     >
-                        <LogOut
-                            size={19}
-                            strokeWidth={1.7}
-                        />
+                        <LogOut size={19} strokeWidth={1.7} />
 
                         {!collapsed && (
                             <span className="ml-3 text-sm">
@@ -527,7 +466,7 @@ const Sidebar = ({
                         )}
 
                         {collapsed && (
-                            <span className="pointer-events-none absolute left-16 z-50 whitespace-nowrap rounded-lg border border-white/10 bg-[#15151f] px-3 py-2 text-xs text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
+                            <span className="pointer-events-none absolute left-14 z-[80] hidden whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-primary)] opacity-0 shadow-xl transition-opacity group-hover:opacity-100 md:block">
                                 Logout
                             </span>
                         )}
