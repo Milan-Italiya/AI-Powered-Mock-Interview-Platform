@@ -296,9 +296,9 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                     className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-violet-500 transition-colors hover:bg-[var(--surface-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                                 >
                                     {theme === "dark" ? (
-                                        <Sun size={19} strokeWidth={1.8} />
+                                        <Sun size={15} strokeWidth={1.8} />
                                     ) : (
-                                        <Moon size={19} strokeWidth={1.8} />
+                                        <Moon size={15} strokeWidth={1.8} />
                                     )}
                                 </button>
 
