@@ -254,10 +254,10 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
 
                         {/* MOBILE HEADER */}
 
-                        <div className="grid min-h-20 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border)] px-3">
+                        <div className="grid h-[76px] shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border)] px-3 sm:px-4">
                             {/* LOGO AND BRAND */}
 
-                            <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex min-w-0 items-center gap-2">
                                 <motion.div
                                     whileHover={{ rotate: 5, scale: 1.05 }}
                                     className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
@@ -271,15 +271,15 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                     />
                                 </motion.div>
 
-                                <div className="min-w-0">
-                                    <div className="whitespace-nowrap text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">
+                                <div className="min-w-0 flex-1">
+                                    <div className="whitespace-nowrap text-[15px] font-semibold leading-5 tracking-tight text-[var(--text-primary)]">
                                         Synthex{" "}
                                         <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
                                             AI
                                         </span>
                                     </div>
 
-                                    <div className="mt-1 whitespace-nowrap text-[9px] uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                                    <div className="mt-1 whitespace-nowrap text-[8px] leading-3 uppercase tracking-[0.08em] text-[var(--text-muted)]">
                                         Interview Intelligence
                                     </div>
                                 </div>
@@ -288,25 +288,38 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                             {/* THEME AND CLOSE BUTTONS */}
 
                             <div className="flex shrink-0 items-center gap-1.5">
-                                <button
+                                <motion.button
                                     type="button"
                                     onClick={toggleTheme}
-                                    aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-                                    title={theme === "dark" ? "Light theme" : "Dark theme"}
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-violet-500 transition-colors hover:bg-[var(--surface-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                                    whileTap={{ scale: 0.92 }}
+                                    aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
+                                    aria-pressed={!isDark}
+                                    title={themeLabel}
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-violet-500 transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                                 >
-                                    {theme === "dark" ? (
-                                        <Sun size={19} strokeWidth={1.8} />
-                                    ) : (
-                                        <Moon size={19} strokeWidth={1.8} />
-                                    )}
-                                </button>
+                                    <AnimatePresence mode="wait" initial={false}>
+                                        <motion.span
+                                            key={theme}
+                                            initial={{ opacity: 0, rotate: -35, scale: 0.75 }}
+                                            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                                            exit={{ opacity: 0, rotate: 35, scale: 0.75 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="flex items-center justify-center"
+                                        >
+                                            {isDark ? (
+                                                <Sun size={19} strokeWidth={1.8} />
+                                            ) : (
+                                                <Moon size={19} strokeWidth={1.8} />
+                                            )}
+                                        </motion.span>
+                                    </AnimatePresence>
+                                </motion.button>
 
                                 <button
                                     type="button"
                                     onClick={() => setMobileOpen(false)}
                                     aria-label="Close navigation menu"
-                                    className="flex h-10 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:scale-95"
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                                 >
                                     <X size={20} strokeWidth={1.7} />
                                 </button>
