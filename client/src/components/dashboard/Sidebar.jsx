@@ -118,10 +118,9 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
     ];
 
     const getItemClasses = (active) =>
-        `group relative flex w-full items-center rounded-xl px-3 py-3 transition-colors ${
-            active
-                ? "bg-violet-500/10 text-violet-500"
-                : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+        `group relative flex w-full items-center rounded-xl px-3 py-3 transition-colors ${active
+            ? "bg-violet-500/10 text-violet-500"
+            : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
         }`;
 
     const renderNavigationItems = (items, layoutId) =>
@@ -154,9 +153,8 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                     />
 
                     <span
-                        className={`ml-3 text-sm ${
-                            collapsed ? "md:hidden" : ""
-                        }`}
+                        className={`ml-3 text-sm ${collapsed ? "md:hidden" : ""
+                            }`}
                     >
                         {item.label}
                     </span>
@@ -178,13 +176,12 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
             aria-label={`Switch to ${themeLabel.toLowerCase()}`}
             aria-pressed={!isDark}
             title={themeLabel}
-            className={`group relative flex items-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-                isMobile
+            className={`group relative flex items-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${isMobile
                     ? "h-9 w-9 shrink-0 justify-center"
                     : collapsed
-                      ? "mx-auto h-10 w-10 justify-center"
-                      : "w-full gap-3 px-3 py-3"
-            }`}
+                        ? "mx-auto h-10 w-10 justify-center"
+                        : "w-full gap-3 px-3 py-3"
+                }`}
         >
             <ThemeIcon
                 size={19}
@@ -256,7 +253,9 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                     >
                         {/* MOBILE HEADER */}
 
-                        <div className="flex h-20 shrink-0 items-center gap-3 border-b border-[var(--border)] px-4">
+                        <div className="flex min-h-20 shrink-0 items-center gap-2 border-b border-[var(--border)] px-3">
+                            {/* LOGO */}
+
                             <motion.div
                                 whileHover={{ rotate: 5, scale: 1.05 }}
                                 className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
@@ -270,28 +269,46 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                 />
                             </motion.div>
 
+                            {/* BRAND */}
+
                             <div className="min-w-0 flex-1">
-                                <div className="whitespace-nowrap text-lg font-semibold tracking-tight text-[var(--text-primary)]">
+                                <div className="whitespace-nowrap text-base font-semibold tracking-tight text-[var(--text-primary)]">
                                     Synthex{" "}
                                     <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
                                         AI
                                     </span>
                                 </div>
 
-                                <div className="whitespace-nowrap text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)]">
+                                <div className="mt-0.5 whitespace-nowrap text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
                                     Interview Intelligence
                                 </div>
                             </div>
 
-                            {renderThemeToggle(true)}
+                            {/* THEME BUTTON */}
+
+                            <button
+                                type="button"
+                                onClick={toggleTheme}
+                                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+                                title={theme === "dark" ? "Light theme" : "Dark theme"}
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-violet-500 transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                            >
+                                {theme === "dark" ? (
+                                    <Sun size={18} />
+                                ) : (
+                                    <Moon size={18} />
+                                )}
+                            </button>
+
+                            {/* CLOSE BUTTON */}
 
                             <button
                                 type="button"
                                 onClick={() => setMobileOpen(false)}
                                 aria-label="Close navigation menu"
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                             >
-                                <X size={18} />
+                                <X size={19} />
                             </button>
                         </div>
 
@@ -355,9 +372,8 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                 {/* DESKTOP HEADER */}
 
                 <div
-                    className={`flex h-20 shrink-0 items-center border-b border-[var(--border)] ${
-                        collapsed ? "justify-center px-2" : "px-5"
-                    }`}
+                    className={`flex h-20 shrink-0 items-center border-b border-[var(--border)] ${collapsed ? "justify-center px-2" : "px-5"
+                        }`}
                 >
                     <motion.div
                         whileHover={{ rotate: 5, scale: 1.05 }}
