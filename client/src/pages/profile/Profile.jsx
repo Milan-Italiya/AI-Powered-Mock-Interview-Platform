@@ -441,7 +441,7 @@ const Profile = () => {
                                     delay={0.25}
                                 >
                                     {user.learningGoals.length > 0 ? (
-                                        <ul className="">
+                                        <ul className="space-y-2">
                                             {user.learningGoals.map(
                                                 (goal, index) => (
                                                     <li
