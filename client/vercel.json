@@ -2,13 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/",
-      "headers": [
-        {
-          "key": "Permissions-Policy",
-          "value": "geolocation=(), camera=(), microphone=(), attribution-reporting=(), private-aggregation=(), join-ad-interest-group=(), run-ad-auction=()"
-        }
-      ]
+      "destination": "/"
     }
   ]
 }
