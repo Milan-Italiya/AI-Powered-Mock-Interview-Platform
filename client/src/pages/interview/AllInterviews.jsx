@@ -579,12 +579,10 @@ const AllInterviews = () => {
                                 <input
                                     type="search"
                                     value={search}
-                                    onChange={(event) =>
-                                        setSearch(event.target.value)
-                                    }
+                                    onChange={(event) => setSearch(event.target.value)}
                                     placeholder="Search title, role, technologies, type..."
                                     aria-label="Search interviews"
-                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#101019] pl-11 pr-11 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-violet-400/40 focus:ring-2 focus:ring-violet-500/15"
+                                    className="appearance-none h-12 w-full rounded-xl border border-white/[0.08] bg-[#101019] pl-11 pr-11 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-violet-400/40 focus:ring-2 focus:ring-violet-500/15 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
                                 />
 
                                 {search && (
