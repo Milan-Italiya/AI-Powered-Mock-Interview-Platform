@@ -177,10 +177,10 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
             aria-pressed={!isDark}
             title={themeLabel}
             className={`group relative flex items-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${isMobile
-                    ? "h-9 w-9 shrink-0 justify-center"
-                    : collapsed
-                        ? "mx-auto h-10 w-10 justify-center"
-                        : "w-full gap-3 px-3 py-3"
+                ? "h-9 w-9 shrink-0 justify-center"
+                : collapsed
+                    ? "mx-auto h-10 w-10 justify-center"
+                    : "w-full gap-3 px-3 py-3"
                 }`}
         >
             <ThemeIcon
@@ -251,65 +251,66 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                         }}
                         className="fixed inset-y-0 left-0 z-[70] flex h-screen h-dvh min-h-0 w-[260px] flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)] shadow-2xl md:hidden"
                     >
+
                         {/* MOBILE HEADER */}
 
-                        <div className="flex min-h-20 shrink-0 items-center gap-2 border-b border-[var(--border)] px-3">
-                            {/* LOGO */}
+                        <div className="grid min-h-20 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border)] px-3">
+                            {/* LOGO AND BRAND */}
 
-                            <motion.div
-                                whileHover={{ rotate: 5, scale: 1.05 }}
-                                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
-                            >
-                                <div className="absolute inset-0 rounded-xl bg-violet-500/20 blur-lg" />
+                            <div className="flex min-w-0 items-center gap-2.5">
+                                <motion.div
+                                    whileHover={{ rotate: 5, scale: 1.05 }}
+                                    className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
+                                >
+                                    <div className="absolute inset-0 rounded-xl bg-violet-500/20 blur-lg" />
 
-                                <Sparkles
-                                    size={20}
-                                    strokeWidth={1.6}
-                                    className="relative text-violet-500"
-                                />
-                            </motion.div>
+                                    <Sparkles
+                                        size={20}
+                                        strokeWidth={1.6}
+                                        className="relative text-violet-500"
+                                    />
+                                </motion.div>
 
-                            {/* BRAND */}
+                                <div className="min-w-0">
+                                    <div className="whitespace-nowrap text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">
+                                        Synthex{" "}
+                                        <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+                                            AI
+                                        </span>
+                                    </div>
 
-                            <div className="min-w-0 flex-1">
-                                <div className="whitespace-nowrap text-base font-semibold tracking-tight text-[var(--text-primary)]">
-                                    Synthex{" "}
-                                    <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
-                                        AI
-                                    </span>
-                                </div>
-
-                                <div className="mt-0.5 whitespace-nowrap text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                                    Interview Intelligence
+                                    <div className="mt-1 whitespace-nowrap text-[9px] uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                                        Interview Intelligence
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* THEME BUTTON */}
+                            {/* THEME AND CLOSE BUTTONS */}
 
-                            <button
-                                type="button"
-                                onClick={toggleTheme}
-                                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-                                title={theme === "dark" ? "Light theme" : "Dark theme"}
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-violet-500 transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                            >
-                                {theme === "dark" ? (
-                                    <Sun size={18} />
-                                ) : (
-                                    <Moon size={18} />
-                                )}
-                            </button>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={toggleTheme}
+                                    aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+                                    title={theme === "dark" ? "Light theme" : "Dark theme"}
+                                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-secondary)] text-violet-500 transition-colors hover:bg-[var(--surface-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                                >
+                                    {theme === "dark" ? (
+                                        <Sun size={19} strokeWidth={1.8} />
+                                    ) : (
+                                        <Moon size={19} strokeWidth={1.8} />
+                                    )}
+                                </button>
 
-                            {/* CLOSE BUTTON */}
-
-                            <button
-                                type="button"
-                                onClick={() => setMobileOpen(false)}
-                                aria-label="Close navigation menu"
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-                            >
-                                <X size={19} />
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileOpen(false)}
+                                    aria-label="Close navigation menu"
+                                    className="flex h-10 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:scale-95"
+                                >
+                                    <X size={20} strokeWidth={1.7} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* MOBILE NAVIGATION */}
