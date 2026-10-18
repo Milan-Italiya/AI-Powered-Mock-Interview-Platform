@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
@@ -20,6 +19,7 @@ import {
     Wrench,
     X,
     RefreshCw,
+    Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -273,8 +273,8 @@ const EditProfile = () => {
             typeof selectedValue === "string"
                 ? selectedValue
                 : selectedValue?.value ??
-                  selectedValue?.target?.value ??
-                  "";
+                selectedValue?.target?.value ??
+                "";
 
         setFormData((previous) => ({
             ...previous,
@@ -305,7 +305,7 @@ const EditProfile = () => {
     ]);
 
     /* =====================================================
-       PROFILE PICTURE
+       PROFILE PICTURE SELECTION
     ===================================================== */
 
     const handleProfilePictureChange = (event) => {
@@ -333,26 +333,63 @@ const EditProfile = () => {
         setPictureRemoved(false);
     };
 
+    /* =====================================================
+       REMOVE PROFILE PICTURE
+    ===================================================== */
+
     const handleRemoveProfilePicture = async () => {
         if (removingPicture) return;
 
-        const hasSavedPicture = Boolean(formData.profilePicture);
+        const hasSavedPicture = Boolean(
+            initialFormData?.profilePicture
+        );
+
         const hasNewPicture = Boolean(profilePicture);
 
         try {
             setRemovingPicture(true);
 
             /*
-             * Discard a newly selected image locally.
-             * Otherwise, remove the existing server image.
+             * If a new image was selected, discard only that selection.
+             * Keep the previously saved image intact.
              */
-            if (hasSavedPicture && !hasNewPicture) {
+            if (hasNewPicture) {
+                const previousPreview = profilePicturePreview;
+
+                setProfilePicture(null);
+                setProfilePicturePreview(
+                    initialFormData?.profilePicture || ""
+                );
+                setPictureRemoved(false);
+
+                setFormData((previous) => ({
+                    ...previous,
+                    profilePicture:
+                        initialFormData?.profilePicture || "",
+                }));
+
+                setRemovePictureModalOpen(false);
+                revokeBlobUrl(previousPreview);
+
+                toast.success(
+                    hasSavedPicture
+                        ? "Selected image removed. Your saved picture is unchanged."
+                        : "Selected image removed."
+                );
+
+                return;
+            }
+
+            /*
+             * Only call the API when removing an already-saved picture.
+             */
+            if (hasSavedPicture) {
                 const response = await removeProfilePicture();
 
                 if (response?.success === false) {
                     throw new Error(
                         response?.message ||
-                            "Failed to remove profile picture."
+                        "Failed to remove profile picture."
                     );
                 }
             }
@@ -361,7 +398,7 @@ const EditProfile = () => {
 
             setProfilePicture(null);
             setProfilePicturePreview("");
-            setPictureRemoved(true);
+            setPictureRemoved(hasSavedPicture);
 
             setFormData((previous) => ({
                 ...previous,
@@ -371,20 +408,19 @@ const EditProfile = () => {
             setInitialFormData((previous) =>
                 previous
                     ? {
-                          ...previous,
-                          profilePicture: "",
-                      }
+                        ...previous,
+                        profilePicture: "",
+                    }
                     : previous
             );
 
             setRemovePictureModalOpen(false);
-
             revokeBlobUrl(previousPreview);
 
             toast.success(
-                hasSavedPicture && !hasNewPicture
+                hasSavedPicture
                     ? "Profile picture removed successfully."
-                    : "Profile picture selection removed."
+                    : "Profile picture cleared."
             );
         } catch (error) {
             console.error("Remove Profile Picture Error:", error);
@@ -501,17 +537,9 @@ const EditProfile = () => {
             return false;
         }
 
-        const selectedRole = String(
-            formData.selectedRole ?? ""
-        ).trim();
-
-        const experienceLevel = String(
-            formData.experienceLevel ?? ""
-        ).trim();
-
         if (
             !ROLE_OPTIONS.some(
-                (option) => option.value === selectedRole
+                (option) => option.value === formData.selectedRole
             )
         ) {
             toast.error("Please select a valid target role.");
@@ -520,7 +548,8 @@ const EditProfile = () => {
 
         if (
             !EXPERIENCE_OPTIONS.some(
-                (option) => option.value === experienceLevel
+                (option) =>
+                    option.value === formData.experienceLevel
             )
         ) {
             toast.error("Please select a valid experience level.");
@@ -558,7 +587,6 @@ const EditProfile = () => {
         event.preventDefault();
 
         if (saving || removingPicture || !hasChanges) return;
-
         if (!validateForm()) return;
 
         try {
@@ -720,19 +748,10 @@ const EditProfile = () => {
                         onClick={() =>
                             setRetryCount((previous) => previous + 1)
                         }
-                        disabled={loading}
-                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
                     >
-                        {loading ? (
-                            <Loader2
-                                size={15}
-                                className="animate-spin"
-                            />
-                        ) : (
-                            <RefreshCw size={15} />
-                        )}
-
-                        {loading ? "Retrying..." : "Try Again"}
+                        <RefreshCw size={15} />
+                        Try Again
                     </button>
 
                     <button
@@ -760,39 +779,59 @@ const EditProfile = () => {
             <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
                 {/* PAGE HEADER */}
 
-                <div className="mb-7 flex items-center gap-3 sm:mb-9 sm:gap-4">
-                    <button
-                        type="button"
-                        onClick={() => navigate("/profile")}
-                        aria-label="Back to profile"
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-zinc-400 transition hover:border-violet-400/20 hover:bg-violet-500/[0.06] hover:text-white"
-                    >
-                        <ArrowLeft size={18} />
-                    </button>
+                <motion.header
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-7 sm:mb-9"
+                >
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/profile")}
+                                aria-label="Back to profile"
+                                className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-zinc-400 transition hover:border-violet-400/20 hover:bg-violet-500/[0.06] hover:text-white"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
 
-                    <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-xs text-zinc-600">
-                                Account Settings
-                            </p>
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-violet-400/90">
+                                        Account management
+                                    </p>
 
-                            {hasChanges && (
-                                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/10 bg-amber-400/[0.06] px-2 py-0.5 text-[10px] font-medium text-amber-300">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                                    Unsaved changes
-                                </span>
-                            )}
+                                    {hasChanges && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/10 bg-amber-400/[0.06] px-2.5 py-1 text-[10px] font-medium text-amber-300">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                                            Unsaved changes
+                                        </span>
+                                    )}
+                                </div>
+
+                                <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                                    Edit Profile
+                                </h1>
+
+                                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+                                    Keep your personal information, career
+                                    goals, and interview preferences up to date.
+                                </p>
+                            </div>
                         </div>
 
-                        <h1 className="mt-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                            Edit Profile
-                        </h1>
-
-                        <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm">
-                            Keep your profile and career preferences up to date.
-                        </p>
+                        <div className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-2.5 sm:self-auto">
+                            <Sparkles
+                                size={16}
+                                className="text-violet-400"
+                            />
+                            <span className="text-xs text-zinc-400">
+                                Personalize your profile
+                            </span>
+                        </div>
                     </div>
-                </div>
+                </motion.header>
 
                 {/* FORM CARD */}
 
@@ -804,30 +843,30 @@ const EditProfile = () => {
                 >
                     {/* CARD HEADER */}
 
-                    <div className="border-b border-white/[0.06] px-5 py-5 sm:px-8 sm:py-6">
+                    <div className="border-b border-white/[0.06] px-5 py-5 sm:px-8 sm:py-6 lg:px-9">
                         <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-400/10 bg-violet-500/[0.08]">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-400/10 bg-violet-500/[0.08]">
                                 <User
-                                    size={18}
+                                    size={19}
                                     className="text-violet-300"
                                 />
                             </div>
 
                             <div className="min-w-0">
-                                <h2 className="font-semibold text-white">
+                                <h2 className="font-semibold text-white sm:text-lg">
                                     Personal Information
                                 </h2>
 
                                 <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm">
-                                    Customize your account, career profile,
-                                    skills, and interview preferences.
+                                    Manage your account details, career
+                                    profile, skills, and learning goals.
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     <form onSubmit={handleSubmit}>
-                        <div className="space-y-8 px-5 py-6 sm:px-8 sm:py-8">
+                        <div className="space-y-8 px-5 py-6 sm:px-8 sm:py-8 lg:px-9 lg:py-9">
                             {/* PROFILE PICTURE */}
 
                             <FormSection
@@ -854,8 +893,8 @@ const EditProfile = () => {
                                                     .trim()
                                                     .charAt(0)
                                                     .toUpperCase() || (
-                                                    <User size={30} />
-                                                )}
+                                                        <User size={30} />
+                                                    )}
                                             </span>
                                         )}
                                     </div>
@@ -916,11 +955,8 @@ const EditProfile = () => {
                                 title="Basic Information"
                                 description="Manage your personal account details."
                             >
-                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                    <FormField
-                                        label="Full Name"
-                                        required
-                                    >
+                                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                                    <FormField label="Full Name" required>
                                         <div className="relative">
                                             <User
                                                 size={17}
@@ -964,7 +1000,7 @@ const EditProfile = () => {
                                         </div>
                                     </FormField>
 
-                                    <div className="sm:col-span-2">
+                                    <div className="lg:col-span-2">
                                         <FormField
                                             label="Bio"
                                             hint="Write a short, professional introduction."
@@ -972,7 +1008,7 @@ const EditProfile = () => {
                                                 <span
                                                     className={
                                                         formData.bio.length >=
-                                                        MAX_BIO_LENGTH
+                                                            MAX_BIO_LENGTH
                                                             ? "text-amber-400"
                                                             : "text-zinc-600"
                                                     }
@@ -1010,7 +1046,7 @@ const EditProfile = () => {
                                 title="Career Profile"
                                 description="Set your target role and career direction."
                             >
-                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
                                     <FormField label="Target Role">
                                         <ThemedSelect
                                             name="selectedRole"
@@ -1043,7 +1079,7 @@ const EditProfile = () => {
                                         />
                                     </FormField>
 
-                                    <div className="sm:col-span-2">
+                                    <div className="lg:col-span-2">
                                         <FormField label="Target Company">
                                             <div className="relative">
                                                 <Target
@@ -1082,7 +1118,7 @@ const EditProfile = () => {
                                     renderItem={(skill, index) => (
                                         <span
                                             key={`${skill}-${index}`}
-                                            className="inline-flex max-w-full items-center gap-2 rounded-xl border border-violet-400/10 bg-violet-500/[0.07] py-1.5 pl-3 pr-2 text-xs text-violet-300"
+                                            className="inline-flex max-w-full items-center gap-2 rounded-xl border border-violet-400/10 bg-violet-500/[0.07] py-2 pl-3 pr-2 text-xs text-violet-300"
                                         >
                                             <span className="break-words">
                                                 {skill}
@@ -1125,11 +1161,11 @@ const EditProfile = () => {
                                         )
                                     }
                                     renderItem={(goal, index) => (
-                                        <div
+                                        <span
                                             key={`${goal}-${index}`}
-                                            className="flex min-w-0 items-start justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-4 py-3"
+                                            className="inline-flex max-w-full items-center gap-2 rounded-xl border border-cyan-400/10 bg-cyan-500/[0.06] py-2 pl-3 pr-2 text-xs text-cyan-200/90"
                                         >
-                                            <span className="min-w-0 break-words text-sm leading-5 text-zinc-400">
+                                            <span className="break-words">
                                                 {goal}
                                             </span>
 
@@ -1142,11 +1178,11 @@ const EditProfile = () => {
                                                     )
                                                 }
                                                 aria-label={`Remove learning goal ${goal}`}
-                                                className="shrink-0 rounded-lg p-1 text-zinc-600 transition hover:bg-red-500/10 hover:text-red-300"
+                                                className="shrink-0 rounded-md p-0.5 text-cyan-200/50 transition hover:bg-red-500/10 hover:text-red-300"
                                             >
-                                                <X size={15} />
+                                                <X size={14} />
                                             </button>
-                                        </div>
+                                        </span>
                                     )}
                                     emptyMessage="Your learning goals will appear here."
                                 />
@@ -1159,7 +1195,7 @@ const EditProfile = () => {
                                 title="Interview Preferences"
                                 description="Customize your preferred mock interview experience."
                             >
-                                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
                                     <FormField label="Preferred Difficulty">
                                         <ThemedSelect
                                             name="preferredDifficulty"
@@ -1201,7 +1237,7 @@ const EditProfile = () => {
 
                         {/* FORM ACTIONS */}
 
-                        <div className="flex flex-col-reverse gap-3 border-t border-white/[0.06] bg-black/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                        <div className="flex flex-col-reverse gap-3 border-t border-white/[0.06] bg-black/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-9">
                             <button
                                 type="button"
                                 onClick={() => navigate("/profile")}
@@ -1280,9 +1316,8 @@ const PageLayout = ({
         />
 
         <motion.main
-            className={`min-h-screen min-w-0 overflow-x-hidden pt-16 transition-[margin-left] duration-300 ease-in-out md:pt-0 ${
-                collapsed ? "md:ml-20" : "md:ml-[260px]"
-            }`}
+            className={`min-h-screen min-w-0 overflow-x-hidden pt-16 transition-[margin-left] duration-300 ease-in-out md:pt-0 ${collapsed ? "md:ml-20" : "md:ml-[260px]"
+                }`}
         >
             {children}
         </motion.main>
@@ -1335,7 +1370,6 @@ const FormField = ({
         <div className="mb-2 flex items-center justify-between gap-3">
             <label className="block text-sm font-medium text-zinc-400">
                 {label}
-
                 {required && (
                     <span className="ml-1 text-violet-400">*</span>
                 )}
@@ -1486,7 +1520,7 @@ const RemovePictureModal = ({
                         id="remove-picture-description"
                         className="mt-2 text-sm leading-6 text-zinc-500"
                     >
-                        Are you sure you want to remove your current profile
+                        Are you sure you want to remove the displayed profile
                         picture? Your initials will be shown instead.
                     </p>
 
