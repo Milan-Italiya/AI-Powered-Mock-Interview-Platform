@@ -284,7 +284,7 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
 
                             {/* THEME AND CLOSE BUTTONS */}
                             <div className="flex shrink-0 items-center gap-2">
-                                <button
+                                {/* <button
                                     type="button"
                                     onClick={toggleTheme}
                                     aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
@@ -296,16 +296,16 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                     ) : (
                                         <Moon size={19} strokeWidth={1.8} />
                                     )}
-                                </button>
+                                </button> */}
 
-                                {/* <button
+                                <button
                                     type="button"
                                     onClick={() => setMobileOpen(false)}
                                     aria-label="Close navigation menu"
                                     className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:scale-95"
                                 >
                                     <X size={20} strokeWidth={1.7} />
-                                </button> */}
+                                </button>
                             </div>
                         </div>
 
