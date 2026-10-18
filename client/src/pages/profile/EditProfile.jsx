@@ -275,8 +275,8 @@ const EditProfile = () => {
             typeof selectedValue === "string"
                 ? selectedValue
                 : selectedValue?.value ??
-                  selectedValue?.target?.value ??
-                  "";
+                selectedValue?.target?.value ??
+                "";
 
         setFormData((previous) => ({
             ...previous,
@@ -357,7 +357,7 @@ const EditProfile = () => {
                 if (response?.success === false) {
                     throw new Error(
                         response?.message ||
-                            "Failed to remove profile picture."
+                        "Failed to remove profile picture."
                     );
                 }
             }
@@ -376,9 +376,9 @@ const EditProfile = () => {
             setInitialFormData((previous) =>
                 previous
                     ? {
-                          ...previous,
-                          profilePicture: "",
-                      }
+                        ...previous,
+                        profilePicture: "",
+                    }
                     : previous
             );
 
@@ -767,7 +767,7 @@ const EditProfile = () => {
             setCollapsed={setCollapsed}
             logout={logout}
         >
-            <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
                 {/* PAGE HEADER */}
 
                 <div className="mb-7 flex items-center gap-3 sm:mb-9 sm:gap-4">
@@ -864,8 +864,8 @@ const EditProfile = () => {
                                                     .trim()
                                                     .charAt(0)
                                                     .toUpperCase() || (
-                                                    <User size={30} />
-                                                )}
+                                                        <User size={30} />
+                                                    )}
                                             </span>
                                         )}
                                     </div>
@@ -976,7 +976,7 @@ const EditProfile = () => {
                                             <span
                                                 className={
                                                     formData.bio.length >=
-                                                    MAX_BIO_LENGTH
+                                                        MAX_BIO_LENGTH
                                                         ? "text-amber-400"
                                                         : "text-zinc-600"
                                                 }
@@ -1279,9 +1279,8 @@ const PageLayout = ({
         />
 
         <motion.main
-            className={`min-h-screen min-w-0 overflow-x-hidden pt-16 transition-[margin-left] duration-300 ease-in-out md:pt-0 ${
-                collapsed ? "md:ml-20" : "md:ml-[260px]"
-            }`}
+            className={`min-h-screen min-w-0 overflow-x-hidden pt-16 transition-[margin-left] duration-300 ease-in-out md:pt-0 ${collapsed ? "md:ml-20" : "md:ml-[260px]"
+                }`}
         >
             {children}
         </motion.main>
