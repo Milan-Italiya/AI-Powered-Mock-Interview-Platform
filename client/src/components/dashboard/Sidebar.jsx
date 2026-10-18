@@ -308,7 +308,7 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                 <X size={20} strokeWidth={1.7} />
                             </button>
                         </div>
-                        
+
 
                         {/* MOBILE NAVIGATION */}
 
