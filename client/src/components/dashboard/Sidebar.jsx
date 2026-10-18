@@ -253,17 +253,15 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                     >
 
                         {/* MOBILE HEADER */}
+                        <div className="flex h-20 shrink-0 items-center justify-between gap-2 border-b border-[var(--border)] px-4">
 
-                        <div className="grid min-h-20 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-[var(--border)] px-3">
                             {/* LOGO AND BRAND */}
-
-                            <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex min-w-0 items-center gap-3">
                                 <motion.div
                                     whileHover={{ rotate: 5, scale: 1.05 }}
                                     className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10"
                                 >
                                     <div className="absolute inset-0 rounded-xl bg-violet-500/20 blur-lg" />
-
                                     <Sparkles
                                         size={20}
                                         strokeWidth={1.6}
@@ -278,16 +276,14 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                             AI
                                         </span>
                                     </div>
-
-                                    <div className="mt-1 whitespace-nowrap text-[9px] uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                                    <div className="mt-0.5 whitespace-nowrap text-[9px] uppercase tracking-[0.1em] text-[var(--text-muted)]">
                                         Interview Intelligence
                                     </div>
                                 </div>
                             </div>
 
                             {/* THEME AND CLOSE BUTTONS */}
-
-                            <div className="relative -translate-y-1 mr-1 flex shrink-0 items-center gap-1">
+                            <div className="flex shrink-0 items-center gap-2">
                                 <button
                                     type="button"
                                     onClick={toggleTheme}
@@ -306,7 +302,7 @@ const Sidebar = ({ collapsed, setCollapsed, onLogout }) => {
                                     type="button"
                                     onClick={() => setMobileOpen(false)}
                                     aria-label="Close navigation menu"
-                                    className="flex h-10 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:scale-95"
+                                    className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] active:scale-95"
                                 >
                                     <X size={20} strokeWidth={1.7} />
                                 </button>
