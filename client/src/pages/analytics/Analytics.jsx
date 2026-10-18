@@ -71,12 +71,16 @@ const Analytics = () => {
         try {
             const response = await getAllInterviews();
 
-            const interviews =
-                response?.data?.interviews ??
-                response?.interviews ??
-                response?.data?.data ??
-                response?.data ??
-                [];
+            // Support the response shapes used by the API/use-case layer:
+            // a direct array, { interviews: [] }, { data: { interviews: [] } },
+            // or Axios-style { data: [] }.
+            const interviews = Array.isArray(response)
+                ? response
+                : response?.data?.interviews ??
+                  response?.interviews ??
+                  response?.data?.data ??
+                  response?.data ??
+                  [];
 
             if (!Array.isArray(interviews)) {
                 throw new Error("Unable to load your interviews.");
@@ -99,11 +103,15 @@ const Analytics = () => {
                             interview._id
                         );
 
+                        // Normalize common result response wrappers without
+                        // assuming that every use-case returns an Axios response.
                         const result =
                             resultResponse?.data?.result ??
+                            resultResponse?.data?.data?.result ??
                             resultResponse?.data?.data ??
                             resultResponse?.data ??
                             resultResponse?.result ??
+                            resultResponse ??
                             null;
 
                         if (!result || typeof result !== "object") {
