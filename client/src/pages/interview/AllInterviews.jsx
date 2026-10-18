@@ -50,6 +50,15 @@ const normalize = (value) =>
         .replace(/[-_]+/g, " ")
         .replace(/\s+/g, " ");
 
+// Supports both native-style events and custom selects that return a value directly.
+const getSelectValue = (value) => {
+    if (value && typeof value === "object" && "target" in value) {
+        return value.target?.value ?? "";
+    }
+
+    return value ?? "";
+};
+
 const getStatus = (interview) => {
     const status = normalize(interview?.status);
 
@@ -144,7 +153,7 @@ const AllInterviews = () => {
 
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
-    const [retryCount, setRetryCount] = useState(0)
+    const [retryCount, setRetryCount] = useState(0);
 
     useEffect(() => {
         try {
@@ -168,6 +177,7 @@ const AllInterviews = () => {
                     response?.data?.interviews ??
                     response?.interviews ??
                     response?.data?.data ??
+                    (Array.isArray(response?.data) ? response.data : undefined) ??
                     [];
 
                 if (!Array.isArray(interviewData)) {
@@ -204,7 +214,13 @@ const AllInterviews = () => {
     const handleDelete = async () => {
         if (!deleteTarget || deletingId) return;
 
-        const interviewId = deleteTarget._id;
+        const interviewId = deleteTarget?._id;
+
+        if (!interviewId) {
+            toast.error("This interview could not be identified. Refresh and try again.");
+            setDeleteTarget(null);
+            return;
+        }
 
         try {
             setDeletingId(interviewId);
@@ -568,7 +584,7 @@ const AllInterviews = () => {
                                     }
                                     placeholder="Search title, role, technologies, type..."
                                     aria-label="Search interviews"
-                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#101019] pl-11 pr-11 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-violet-400/40"
+                                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#101019] pl-11 pr-11 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-violet-400/40 focus:ring-2 focus:ring-violet-500/15"
                                 />
 
                                 {search && (
@@ -602,7 +618,7 @@ const AllInterviews = () => {
                                                 <ThemedSelect
                                                     name="interviewType"
                                                     value={typeFilter}
-                                                    onChange={(event) => setTypeFilter(event.target.value)}
+                                                    onChange={(value) => setTypeFilter(normalize(getSelectValue(value)) || "all")}
                                                     placeholder="All types"
                                                     icon={Sparkles}
                                                     options={[
@@ -623,7 +639,7 @@ const AllInterviews = () => {
                                                 <ThemedSelect
                                                     name="difficulty"
                                                     value={difficultyFilter}
-                                                    onChange={(event) => setDifficultyFilter(event.target.value)}
+                                                    onChange={(value) => setDifficultyFilter(normalize(getSelectValue(value)) || "all")}
                                                     placeholder="All difficulties"
                                                     icon={SlidersHorizontal}
                                                     options={[
@@ -644,7 +660,7 @@ const AllInterviews = () => {
                                                 <ThemedSelect
                                                     name="experienceLevel"
                                                     value={experienceFilter}
-                                                    onChange={(event) => setExperienceFilter(event.target.value)}
+                                                    onChange={(value) => setExperienceFilter(normalize(getSelectValue(value)) || "all")}
                                                     placeholder="All experience levels"
                                                     icon={Code2}
                                                     options={[
@@ -668,7 +684,7 @@ const AllInterviews = () => {
                                                 <ThemedSelect
                                                     name="sortBy"
                                                     value={sortBy}
-                                                    onChange={(event) => setSortBy(event.target.value)}
+                                                    onChange={(value) => setSortBy(getSelectValue(value) || "newest")}
                                                     placeholder="Newest first"
                                                     icon={ArrowDownWideNarrow}
                                                     options={[
