@@ -1,0 +1,79 @@
+
+/* Synthex AI — Delayed, smooth diamond-morph theme transition */
+
+:root {
+    view-transition-name: root;
+}
+
+::view-transition-group(root) {
+    animation-duration: 1.6s;
+    animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+::view-transition-old(root) {
+    animation: synthex-theme-old 1.6s ease both;
+    z-index: 1;
+}
+
+::view-transition-new(root) {
+    animation: synthex-diamond-morph 1.6s
+        cubic-bezier(0.65, 0, 0.35, 1) 200ms both;
+    z-index: 2;
+}
+
+@keyframes synthex-theme-old {
+    0% {
+        opacity: 1;
+    }
+
+    35% {
+        opacity: 0.96;
+    }
+
+    100% {
+        opacity: 0.9;
+    }
+}
+
+/* Pause briefly, then expand the diamond smoothly */
+@keyframes synthex-diamond-morph {
+    0% {
+        clip-path: polygon(
+            50% 50%,
+            50% 50%,
+            50% 50%,
+            50% 50%
+        );
+        opacity: 0.96;
+    }
+
+    12% {
+        clip-path: polygon(
+            50% 42%,
+            58% 50%,
+            50% 58%,
+            42% 50%
+        );
+        opacity: 1;
+    }
+
+    100% {
+        clip-path: polygon(
+            50% -100%,
+            200% 50%,
+            50% 200%,
+            -100% 50%
+        );
+        opacity: 1;
+    }
+}
+
+/* Accessibility: respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(root),
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+    }
+}
