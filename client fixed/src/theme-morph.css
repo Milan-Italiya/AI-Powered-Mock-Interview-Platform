@@ -1,0 +1,78 @@
+/* =========================================
+   SYNTHEX AI — SPARKLE THEME TRANSITION (constant speed)
+========================================= */
+
+:root {
+    view-transition-name: root;
+
+    --sparkle-duration: 1500ms;   /* 500ms sparkle open + 1000ms morph, same speed */
+    --sparkle-delay: 250ms;       /* pause before the sparkle opens */
+}
+
+::view-transition-group(root) {
+    animation-duration: calc(var(--sparkle-duration) + var(--sparkle-delay));
+    animation-timing-function: linear;
+}
+
+::view-transition-old(root) {
+    animation: none;
+    z-index: 1;
+}
+
+::view-transition-new(root) {
+    animation: synthex-sparkle-reveal var(--sparkle-duration)
+        linear var(--sparkle-delay) both;
+    z-index: 2;
+    isolation: isolate;
+    will-change: clip-path;
+}
+
+/*
+  Tip distance grows by the same amount per step (3 → 56 → 108 → 160),
+  every segment is linear, so the speed is the same from start to end
+  with no slow-down at the finish.
+  Order: top tip, ↗ inner, right tip, ↘ inner,
+         bottom tip, ↙ inner, left tip, ↖ inner.
+*/
+@keyframes synthex-sparkle-reveal {
+    0% {
+        clip-path: polygon(
+            50% 47%, 50.5% 49.5%, 53% 50%, 50.5% 50.5%,
+            50% 53%, 49.5% 50.5%, 47% 50%, 49.5% 49.5%
+        );
+        animation-timing-function: linear;
+    }
+
+    33.333% {  /* = 500ms: sparkle fully open, morph starts here */
+        clip-path: polygon(
+            50% -6%, 62% 38%, 106% 50%, 62% 62%,
+            50% 106%, 38% 62%, -6% 50%, 38% 38%
+        );
+        animation-timing-function: linear;
+    }
+
+    66.667% {  /* = 1000ms: morph continues at the same speed */
+        clip-path: polygon(
+            50% -58%, 105% -5%, 158% 50%, 105% 105%,
+            50% 158%, -5% 105%, -58% 50%, -5% -5%
+        );
+        animation-timing-function: linear;
+    }
+
+    100% {
+        /* inner points beyond the corners = full coverage */
+        clip-path: polygon(
+            50% -110%, 150% -50%, 210% 50%, 150% 150%,
+            50% 210%, -50% 150%, -110% 50%, -50% -50%
+        );
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(root),
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0s !important;
+    }
+}

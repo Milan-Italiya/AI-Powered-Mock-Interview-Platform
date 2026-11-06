@@ -1,0 +1,1707 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "motion/react";
+import {
+    AlertTriangle,
+    ArrowLeft,
+    Briefcase,
+    Check,
+    FileText,
+    Gauge,
+    GraduationCap,
+    Image as ImageIcon,
+    Loader2,
+    Mail,
+    MessageSquare,
+    Save,
+    Target,
+    Trash2,
+    User,
+    Wrench,
+    X,
+    RefreshCw,
+    Sparkles,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
+import Sidebar from "../../components/dashboard/Sidebar.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import ThemedSelect from "../../components/common/ThemedSelect.jsx";
+
+import {
+    getProfile,
+    removeProfilePicture,
+    updateProfile,
+} from "../../usecase/user.usecase.js";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_BIO_LENGTH = 300;
+const MAX_COMPANY_LENGTH = 100;
+const MAX_LIST_ITEM_LENGTH = 100;
+const MAX_LIST_ITEMS = 30;
+
+const EMPTY_FORM = {
+    fullName: "",
+    email: "",
+    profilePicture: "",
+    bio: "",
+    selectedRole: "",
+    experienceLevel: "",
+    targetCompany: "",
+    skills: [],
+    learningGoals: [],
+    preferredDifficulty: "Medium",
+    preferredInterviewType: "Mixed",
+};
+
+const ROLE_OPTIONS = [
+    { value: "Frontend Developer", label: "Frontend Developer" },
+    { value: "Backend Developer", label: "Backend Developer" },
+    { value: "Full Stack Developer", label: "Full Stack Developer" },
+    { value: "Java Developer", label: "Java Developer" },
+    { value: "Python Developer", label: "Python Developer" },
+    { value: "Data Analyst", label: "Data Analyst" },
+    { value: "DevOps Engineer", label: "DevOps Engineer" },
+    { value: "UI/UX Designer", label: "UI/UX Designer" },
+];
+
+const EXPERIENCE_OPTIONS = [
+    { value: "Student", label: "Student" },
+    { value: "Fresher", label: "Fresher" },
+    { value: "1-2 Years", label: "1-2 Years" },
+    { value: "3-5 Years", label: "3-5 Years" },
+    { value: "5+ Years", label: "5+ Years" },
+];
+
+const DIFFICULTY_OPTIONS = [
+    { value: "Easy", label: "Easy" },
+    { value: "Medium", label: "Medium" },
+    { value: "Hard", label: "Hard" },
+];
+
+const INTERVIEW_TYPE_OPTIONS = [
+    { value: "Technical", label: "Technical" },
+    { value: "HR", label: "HR" },
+    { value: "Behavioral", label: "Behavioral" },
+    { value: "Mixed", label: "Mixed" },
+];
+
+const ALLOWED_IMAGE_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const getErrorMessage = (error, fallback) =>
+    error?.response?.data?.message ||
+    error?.message ||
+    fallback;
+
+const getProfileFromResponse = (response) =>
+    response?.data?.user ??
+    response?.user ??
+    response?.data?.profile ??
+    response?.profile ??
+    null;
+
+const normalizeProfile = (user = {}) => ({
+    ...EMPTY_FORM,
+    ...user,
+    fullName: user?.fullName ?? "",
+    email: user?.email ?? "",
+    profilePicture: user?.profilePicture ?? "",
+    bio: user?.bio ?? "",
+    selectedRole: user?.selectedRole ?? "",
+    experienceLevel: user?.experienceLevel ?? "",
+    targetCompany: user?.targetCompany ?? "",
+    skills: Array.isArray(user?.skills) ? [...user.skills] : [],
+    learningGoals: Array.isArray(user?.learningGoals)
+        ? [...user.learningGoals]
+        : [],
+    preferredDifficulty: user?.preferredDifficulty || "Medium",
+    preferredInterviewType: user?.preferredInterviewType || "Mixed",
+});
+
+const revokeBlobUrl = (url) => {
+    if (typeof url === "string" && url.startsWith("blob:")) {
+        URL.revokeObjectURL(url);
+    }
+};
+
+const getComparableForm = (form) => ({
+    fullName: form.fullName,
+    email: form.email,
+    profilePicture: form.profilePicture,
+    bio: form.bio,
+    selectedRole: form.selectedRole,
+    experienceLevel: form.experienceLevel,
+    targetCompany: form.targetCompany,
+    skills: form.skills,
+    learningGoals: form.learningGoals,
+    preferredDifficulty: form.preferredDifficulty,
+    preferredInterviewType: form.preferredInterviewType,
+});
+
+/* =========================================================
+   EDIT PROFILE
+========================================================= */
+
+const EditProfile = () => {
+    const navigate = useNavigate();
+    const { logout, refreshUser } = useAuth();
+    const { isDark } = useTheme();
+
+    const [collapsed, setCollapsed] = useState(
+        () => localStorage.getItem("sidebar-collapsed") === "true"
+    );
+
+    const [formData, setFormData] = useState(EMPTY_FORM);
+    const [initialFormData, setInitialFormData] = useState(null);
+
+    const [profilePicture, setProfilePicture] = useState(null);
+    const [profilePicturePreview, setProfilePicturePreview] =
+        useState("");
+    const [pictureRemoved, setPictureRemoved] = useState(false);
+
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+    const [saving, setSaving] = useState(false);
+
+    const [removePictureModalOpen, setRemovePictureModalOpen] =
+        useState(false);
+    const [removingPicture, setRemovingPicture] = useState(false);
+
+    const [retryCount, setRetryCount] = useState(0);
+
+    /* =====================================================
+       SIDEBAR SYNC
+    ===================================================== */
+
+    useEffect(() => {
+        const syncSidebar = () => {
+            setCollapsed(
+                localStorage.getItem("sidebar-collapsed") === "true"
+            );
+        };
+
+        window.addEventListener("storage", syncSidebar);
+
+        return () => {
+            window.removeEventListener("storage", syncSidebar);
+        };
+    }, []);
+
+    /* =====================================================
+       FETCH PROFILE
+    ===================================================== */
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchProfile = async () => {
+            setLoading(true);
+            setLoadError("");
+
+            try {
+                const response = await getProfile();
+                const user = getProfileFromResponse(response);
+
+                if (!user || typeof user !== "object") {
+                    throw new Error("Unable to load your profile.");
+                }
+
+                const normalizedProfile = normalizeProfile(user);
+
+                if (!isMounted) return;
+
+                setFormData(normalizedProfile);
+                setInitialFormData(normalizedProfile);
+
+                setProfilePicture(null);
+                setPictureRemoved(false);
+                setProfilePicturePreview(
+                    normalizedProfile.profilePicture
+                );
+            } catch (error) {
+                console.error("Fetch Profile Error:", error);
+
+                const message = getErrorMessage(
+                    error,
+                    "Failed to load your profile."
+                );
+
+                if (isMounted) {
+                    setLoadError(message);
+                    toast.error(message);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchProfile();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [retryCount]);
+
+    /* =====================================================
+       FORM CHANGE HANDLERS
+    ===================================================== */
+
+    const handleChange = (event) => {
+        const { name, value } = event.target;
+
+        setFormData((previous) => ({
+            ...previous,
+            [name]: value,
+        }));
+    };
+
+    const handleSelectChange = (fieldName, selectedValue) => {
+        const value =
+            typeof selectedValue === "string"
+                ? selectedValue
+                : selectedValue?.value ??
+                selectedValue?.target?.value ??
+                "";
+
+        setFormData((previous) => ({
+            ...previous,
+            [fieldName]: String(value).trim(),
+        }));
+    };
+
+    /* =====================================================
+       UNSAVED CHANGES
+    ===================================================== */
+
+    const hasChanges = useMemo(() => {
+        if (!initialFormData) return false;
+
+        const current = getComparableForm(formData);
+        const initial = getComparableForm(initialFormData);
+
+        return (
+            JSON.stringify(current) !== JSON.stringify(initial) ||
+            profilePicture !== null ||
+            pictureRemoved
+        );
+    }, [
+        formData,
+        initialFormData,
+        profilePicture,
+        pictureRemoved,
+    ]);
+
+    /* =====================================================
+       PROFILE PICTURE SELECTION
+    ===================================================== */
+
+    const handleProfilePictureChange = (event) => {
+        const file = event.target.files?.[0];
+
+        // Allow selecting the same image again.
+        event.target.value = "";
+
+        if (!file) return;
+
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+            toast.error("Choose a JPG, PNG, or WEBP image.");
+            return;
+        }
+
+        if (file.size > MAX_IMAGE_SIZE) {
+            toast.error("Image size must be less than 5 MB.");
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+
+        setProfilePicture(file);
+        setProfilePicturePreview(previewUrl);
+        setPictureRemoved(false);
+    };
+
+    /* =====================================================
+       REMOVE PROFILE PICTURE
+    ===================================================== */
+
+    const handleRemoveProfilePicture = async () => {
+        if (removingPicture) return;
+
+        const hasSavedPicture = Boolean(
+            initialFormData?.profilePicture
+        );
+
+        const hasNewPicture = Boolean(profilePicture);
+
+        try {
+            setRemovingPicture(true);
+
+            /*
+             * If a new image was selected, discard only that selection.
+             * Keep the previously saved image intact.
+             */
+            if (hasNewPicture) {
+                const previousPreview = profilePicturePreview;
+
+                setProfilePicture(null);
+                setProfilePicturePreview(
+                    initialFormData?.profilePicture || ""
+                );
+                setPictureRemoved(false);
+
+                setFormData((previous) => ({
+                    ...previous,
+                    profilePicture:
+                        initialFormData?.profilePicture || "",
+                }));
+
+                setRemovePictureModalOpen(false);
+                revokeBlobUrl(previousPreview);
+
+                toast.success(
+                    hasSavedPicture
+                        ? "Selected image removed. Your saved picture is unchanged."
+                        : "Selected image removed."
+                );
+
+                return;
+            }
+
+            /*
+             * Only call the API when removing an already-saved picture.
+             */
+            if (hasSavedPicture) {
+                const response = await removeProfilePicture();
+
+                if (response?.success === false) {
+                    throw new Error(
+                        response?.message ||
+                        "Failed to remove profile picture."
+                    );
+                }
+            }
+
+            const previousPreview = profilePicturePreview;
+
+            setProfilePicture(null);
+            setProfilePicturePreview("");
+            setPictureRemoved(hasSavedPicture);
+
+            setFormData((previous) => ({
+                ...previous,
+                profilePicture: "",
+            }));
+
+            setInitialFormData((previous) =>
+                previous
+                    ? {
+                        ...previous,
+                        profilePicture: "",
+                    }
+                    : previous
+            );
+
+            setRemovePictureModalOpen(false);
+            revokeBlobUrl(previousPreview);
+
+            toast.success(
+                hasSavedPicture
+                    ? "Profile picture removed successfully."
+                    : "Profile picture cleared."
+            );
+        } catch (error) {
+            console.error("Remove Profile Picture Error:", error);
+
+            toast.error(
+                getErrorMessage(
+                    error,
+                    "Failed to remove profile picture."
+                )
+            );
+        } finally {
+            setRemovingPicture(false);
+        }
+    };
+
+    /* =====================================================
+       CLEAN UP TEMPORARY IMAGE URL
+    ===================================================== */
+
+    useEffect(() => {
+        return () => {
+            revokeBlobUrl(profilePicturePreview);
+        };
+    }, [profilePicturePreview]);
+
+    /* =====================================================
+       SKILLS AND LEARNING GOALS
+    ===================================================== */
+
+    const addListItem = (event, fieldName, label) => {
+        if (event.key !== "Enter") return;
+
+        event.preventDefault();
+
+        const input = event.currentTarget;
+        const value = input.value.trim();
+
+        if (!value) return;
+
+        if (value.length > MAX_LIST_ITEM_LENGTH) {
+            toast.error(
+                `${label} cannot exceed ${MAX_LIST_ITEM_LENGTH} characters.`
+            );
+            return;
+        }
+
+        const existingItems = formData[fieldName];
+
+        if (existingItems.length >= MAX_LIST_ITEMS) {
+            toast.error(
+                `You can add up to ${MAX_LIST_ITEMS} ${label.toLowerCase()} items.`
+            );
+            return;
+        }
+
+        const alreadyExists = existingItems.some(
+            (item) =>
+                item.trim().toLowerCase() === value.toLowerCase()
+        );
+
+        if (alreadyExists) {
+            toast.error(`${label} already added.`);
+            input.value = "";
+            return;
+        }
+
+        setFormData((previous) => ({
+            ...previous,
+            [fieldName]: [...previous[fieldName], value],
+        }));
+
+        input.value = "";
+    };
+
+    const removeListItem = (fieldName, index) => {
+        setFormData((previous) => ({
+            ...previous,
+            [fieldName]: previous[fieldName].filter(
+                (_, itemIndex) => itemIndex !== index
+            ),
+        }));
+    };
+
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
+
+    const validateForm = () => {
+        const fullName = formData.fullName.trim();
+        const bio = formData.bio.trim();
+        const targetCompany = formData.targetCompany.trim();
+
+        if (fullName.length < 3) {
+            toast.error("Full name must be at least 3 characters.");
+            return false;
+        }
+
+        if (fullName.length > 50) {
+            toast.error("Full name cannot exceed 50 characters.");
+            return false;
+        }
+
+        if (bio.length > MAX_BIO_LENGTH) {
+            toast.error(
+                `Bio cannot exceed ${MAX_BIO_LENGTH} characters.`
+            );
+            return false;
+        }
+
+        if (targetCompany.length > MAX_COMPANY_LENGTH) {
+            toast.error(
+                `Target company cannot exceed ${MAX_COMPANY_LENGTH} characters.`
+            );
+            return false;
+        }
+
+        if (
+            !ROLE_OPTIONS.some(
+                (option) => option.value === formData.selectedRole
+            )
+        ) {
+            toast.error("Please select a valid target role.");
+            return false;
+        }
+
+        if (
+            !EXPERIENCE_OPTIONS.some(
+                (option) =>
+                    option.value === formData.experienceLevel
+            )
+        ) {
+            toast.error("Please select a valid experience level.");
+            return false;
+        }
+
+        if (
+            !DIFFICULTY_OPTIONS.some(
+                (option) =>
+                    option.value === formData.preferredDifficulty
+            )
+        ) {
+            toast.error("Please select a valid interview difficulty.");
+            return false;
+        }
+
+        if (
+            !INTERVIEW_TYPE_OPTIONS.some(
+                (option) =>
+                    option.value === formData.preferredInterviewType
+            )
+        ) {
+            toast.error("Please select a valid interview type.");
+            return false;
+        }
+
+        return true;
+    };
+
+    /* =====================================================
+       SUBMIT
+    ===================================================== */
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+
+        if (saving || removingPicture || !hasChanges) return;
+        if (!validateForm()) return;
+
+        try {
+            setSaving(true);
+
+            const payload = {
+                fullName: formData.fullName.trim(),
+                bio: formData.bio.trim(),
+                selectedRole: formData.selectedRole.trim(),
+                experienceLevel: formData.experienceLevel.trim(),
+                targetCompany: formData.targetCompany.trim(),
+                skills: formData.skills
+                    .map((skill) => skill.trim())
+                    .filter(Boolean),
+                learningGoals: formData.learningGoals
+                    .map((goal) => goal.trim())
+                    .filter(Boolean),
+                preferredDifficulty: formData.preferredDifficulty,
+                preferredInterviewType: formData.preferredInterviewType,
+                profilePicture:
+                    profilePicture instanceof File
+                        ? profilePicture
+                        : null,
+            };
+
+            const response = await updateProfile(payload);
+
+            if (response?.success === false) {
+                throw new Error(
+                    response.message || "Failed to update profile."
+                );
+            }
+
+            toast.success(
+                response?.message || "Profile updated successfully."
+            );
+
+            let normalizedProfile = normalizeProfile({
+                ...formData,
+                fullName: payload.fullName,
+                bio: payload.bio,
+                selectedRole: payload.selectedRole,
+                experienceLevel: payload.experienceLevel,
+                targetCompany: payload.targetCompany,
+                skills: payload.skills,
+                learningGoals: payload.learningGoals,
+                preferredDifficulty: payload.preferredDifficulty,
+                preferredInterviewType: payload.preferredInterviewType,
+            });
+
+            try {
+                const refreshedResponse = await getProfile();
+                const refreshedUser =
+                    getProfileFromResponse(refreshedResponse);
+
+                if (
+                    refreshedUser &&
+                    typeof refreshedUser === "object"
+                ) {
+                    normalizedProfile = normalizeProfile(refreshedUser);
+                }
+            } catch (refreshError) {
+                console.error(
+                    "Refresh Profile After Update Error:",
+                    refreshError
+                );
+            }
+
+            setFormData(normalizedProfile);
+            setInitialFormData(normalizedProfile);
+
+            setProfilePicture(null);
+            setPictureRemoved(false);
+            setProfilePicturePreview(
+                normalizedProfile.profilePicture
+            );
+
+            try {
+                await refreshUser();
+            } catch (authRefreshError) {
+                console.error(
+                    "Refresh Authentication User Error:",
+                    authRefreshError
+                );
+            }
+
+            navigate("/profile", { replace: true });
+        } catch (error) {
+            console.error("Update Profile Error:", error);
+
+            toast.error(
+                getErrorMessage(error, "Failed to update profile.")
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    /* =====================================================
+       LOADING STATE
+    ===================================================== */
+
+    if (loading) {
+        return (
+            <PageLayout
+                collapsed={collapsed}
+                isDark={isDark}
+                setCollapsed={setCollapsed}
+                logout={logout}
+            >
+                <div className="flex min-h-[70vh] flex-col items-center justify-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-400/10 bg-violet-500/[0.07]">
+                        <Loader2
+                            size={28}
+                            className="animate-spin text-violet-400"
+                        />
+                    </div>
+
+                    <p className="mt-4 text-sm font-medium text-zinc-300">
+                        Loading your profile
+                    </p>
+
+                    <p className="mt-1 text-xs text-zinc-600">
+                        Please wait a moment...
+                    </p>
+                </div>
+            </PageLayout>
+        );
+    }
+
+    /* =====================================================
+       ERROR STATE
+    ===================================================== */
+
+    if (loadError && !initialFormData) {
+        return (
+            <PageLayout
+                collapsed={collapsed}
+                isDark={isDark}
+                setCollapsed={setCollapsed}
+                logout={logout}
+            >
+                <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-5 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/10 bg-red-500/[0.07]">
+                        <AlertTriangle
+                            size={24}
+                            className="text-red-400"
+                        />
+                    </div>
+
+                    <h1 className="mt-5 text-lg font-semibold text-white">
+                        Unable to load profile
+                    </h1>
+
+                    <p className="mt-2 text-sm leading-6 text-zinc-500">
+                        {loadError}
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setRetryCount((previous) => previous + 1)
+                        }
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
+                    >
+                        <RefreshCw size={15} />
+                        Try Again
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/profile")}
+                        className="mt-3 text-sm text-zinc-500 transition hover:text-white"
+                    >
+                        Return to Profile
+                    </button>
+                </div>
+            </PageLayout>
+        );
+    }
+
+    /* =====================================================
+       MAIN
+    ===================================================== */
+
+    return (
+        <PageLayout
+            collapsed={collapsed}
+            isDark={isDark}
+            setCollapsed={setCollapsed}
+            logout={logout}
+        >
+            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
+                {/* PAGE HEADER */}
+
+                <motion.header
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-7 sm:mb-9"
+                >
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/profile")}
+                                aria-label="Back to profile"
+                                className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-zinc-400 transition hover:border-violet-400/20 hover:bg-violet-500/[0.06] hover:text-white"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
+
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-violet-400/90">
+                                        Account management
+                                    </p>
+
+                                    {hasChanges && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/10 bg-amber-400/[0.06] px-2.5 py-1 text-[10px] font-medium text-amber-300">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                                            Unsaved changes
+                                        </span>
+                                    )}
+                                </div>
+
+                                <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                                    Edit Profile
+                                </h1>
+
+                                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+                                    Keep your personal information, career
+                                    goals, and interview preferences up to date.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-2.5 sm:self-auto">
+                            <Sparkles
+                                size={16}
+                                className="text-violet-400"
+                            />
+                            <span className="text-xs text-zinc-400">
+                                Personalize your profile
+                            </span>
+                        </div>
+                    </div>
+                </motion.header>
+
+                {/* FORM CARD */}
+
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35 }}
+                    className="overflow-visible rounded-2xl border border-white/[0.07] bg-[#0d0d12] shadow-xl shadow-black/10"
+                >
+                    {/* CARD HEADER */}
+
+                    <div className="border-b border-white/[0.06] px-5 py-5 sm:px-8 sm:py-6 lg:px-9">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-400/10 bg-violet-500/[0.08]">
+                                <User
+                                    size={19}
+                                    className="text-violet-300"
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+                                <h2 className="font-semibold text-white sm:text-lg">
+                                    Personal Information
+                                </h2>
+
+                                <p className="mt-1 text-xs leading-5 text-zinc-500 sm:text-sm">
+                                    Manage your account details, career
+                                    profile, skills, and learning goals.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-8 px-5 py-6 sm:px-8 sm:py-8 lg:px-9 lg:py-9">
+                            {/* PROFILE PICTURE */}
+
+                            <FormSection
+                                icon={ImageIcon}
+                                title="Profile Picture"
+                                description="Choose a clear image for your account."
+                            >
+                                <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                                    <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-violet-400/15 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10">
+                                        {profilePicturePreview ? (
+                                            <img
+                                                src={profilePicturePreview}
+                                                alt="Profile preview"
+                                                className="h-full w-full object-cover"
+                                                onError={() => {
+                                                    toast.error(
+                                                        "Unable to display this profile image."
+                                                    );
+                                                }}
+                                            />
+                                        ) : (
+                                            <span className="text-2xl font-semibold text-violet-300">
+                                                {formData.fullName
+                                                    .trim()
+                                                    .charAt(0)
+                                                    .toUpperCase() || (
+                                                        <User size={30} />
+                                                    )}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium text-white">
+                                            Your profile image
+                                        </p>
+
+                                        <p className="mt-1 text-xs leading-5 text-zinc-500">
+                                            JPG, PNG, or WEBP. Maximum 5 MB.
+                                        </p>
+
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3.5 py-2.5 text-xs font-medium text-zinc-300 transition hover:border-violet-400/20 hover:bg-violet-500/[0.06] hover:text-white">
+                                                <ImageIcon size={15} />
+                                                Choose Image
+
+                                                <input
+                                                    type="file"
+                                                    accept="image/png,image/jpeg,image/webp"
+                                                    onChange={
+                                                        handleProfilePictureChange
+                                                    }
+                                                    disabled={
+                                                        saving || removingPicture
+                                                    }
+                                                    className="sr-only"
+                                                />
+                                            </label>
+
+                                            {profilePicturePreview && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setRemovePictureModalOpen(
+                                                            true
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        saving || removingPicture
+                                                    }
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-red-400/10 bg-red-500/[0.05] px-3.5 py-2.5 text-xs font-medium text-red-400 transition hover:bg-red-500/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <Trash2 size={15} />
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </FormSection>
+
+                            {/* BASIC INFORMATION */}
+
+                            <FormSection
+                                icon={User}
+                                title="Basic Information"
+                                description="Manage your personal account details."
+                            >
+                                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                                    <FormField label="Full Name" required>
+                                        <div className="relative">
+                                            <User
+                                                size={17}
+                                                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600"
+                                            />
+
+                                            <input
+                                                type="text"
+                                                name="fullName"
+                                                value={formData.fullName}
+                                                onChange={handleChange}
+                                                required
+                                                minLength={3}
+                                                maxLength={50}
+                                                autoComplete="name"
+                                                placeholder="Enter your full name"
+                                                className={inputClass("pl-11")}
+                                            />
+                                        </div>
+                                    </FormField>
+
+                                    <FormField
+                                        label="Email Address"
+                                        hint="Your email address cannot be changed here."
+                                    >
+                                        <div className="relative">
+                                            <Mail
+                                                size={17}
+                                                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600"
+                                            />
+
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                value={formData.email}
+                                                disabled
+                                                readOnly
+                                                autoComplete="email"
+                                                className={`${inputClass("pl-11")} cursor-not-allowed text-zinc-600`}
+                                            />
+                                        </div>
+                                    </FormField>
+
+                                    <div className="lg:col-span-2">
+                                        <FormField
+                                            label="Bio"
+                                            hint="Write a short, professional introduction."
+                                            trailing={
+                                                <span
+                                                    className={
+                                                        formData.bio.length >=
+                                                            MAX_BIO_LENGTH
+                                                            ? "text-amber-400"
+                                                            : "text-zinc-600"
+                                                    }
+                                                >
+                                                    {formData.bio.length}/
+                                                    {MAX_BIO_LENGTH}
+                                                </span>
+                                            }
+                                        >
+                                            <div className="relative">
+                                                <FileText
+                                                    size={17}
+                                                    className="pointer-events-none absolute left-4 top-4 text-zinc-600"
+                                                />
+
+                                                <textarea
+                                                    name="bio"
+                                                    value={formData.bio}
+                                                    onChange={handleChange}
+                                                    rows={4}
+                                                    maxLength={MAX_BIO_LENGTH}
+                                                    placeholder="Tell us about yourself..."
+                                                    className={`${inputClass("pl-11")} min-h-28 resize-y leading-6`}
+                                                />
+                                            </div>
+                                        </FormField>
+                                    </div>
+                                </div>
+                            </FormSection>
+
+                            {/* CAREER PROFILE */}
+
+                            <FormSection
+                                icon={Briefcase}
+                                title="Career Profile"
+                                description="Set your target role and career direction."
+                            >
+                                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                                    <FormField label="Target Role">
+                                        <ThemedSelect
+                                            name="selectedRole"
+                                            value={formData.selectedRole}
+                                            onChange={(value) =>
+                                                handleSelectChange(
+                                                    "selectedRole",
+                                                    value
+                                                )
+                                            }
+                                            options={ROLE_OPTIONS}
+                                            placeholder="Select target role"
+                                            icon={Briefcase}
+                                        />
+                                    </FormField>
+
+                                    <FormField label="Experience Level">
+                                        <ThemedSelect
+                                            name="experienceLevel"
+                                            value={formData.experienceLevel}
+                                            onChange={(value) =>
+                                                handleSelectChange(
+                                                    "experienceLevel",
+                                                    value
+                                                )
+                                            }
+                                            options={EXPERIENCE_OPTIONS}
+                                            placeholder="Select experience"
+                                            icon={GraduationCap}
+                                        />
+                                    </FormField>
+
+                                    <div className="lg:col-span-2">
+                                        <FormField label="Target Company">
+                                            <div className="relative">
+                                                <Target
+                                                    size={17}
+                                                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600"
+                                                />
+
+                                                <input
+                                                    type="text"
+                                                    name="targetCompany"
+                                                    value={formData.targetCompany}
+                                                    onChange={handleChange}
+                                                    maxLength={MAX_COMPANY_LENGTH}
+                                                    placeholder="e.g. Google, Microsoft, TCS"
+                                                    className={inputClass("pl-11")}
+                                                />
+                                            </div>
+                                        </FormField>
+                                    </div>
+                                </div>
+                            </FormSection>
+
+                            {/* SKILLS */}
+
+                            <FormSection
+                                icon={Wrench}
+                                title="Skills"
+                                description="Highlight the skills you already have."
+                            >
+                                <ListEditor
+                                    placeholder="Type a skill and press Enter"
+                                    items={formData.skills}
+                                    onAdd={(event) =>
+                                        addListItem(event, "skills", "Skill")
+                                    }
+                                    renderItem={(skill, index) => (
+                                        <span
+                                            key={`${skill}-${index}`}
+                                            className="edit-profile-skill-badge inline-flex max-w-full items-center gap-2 rounded-xl border border-violet-400/10 bg-violet-500/[0.07] py-2 pl-3 pr-2 text-xs text-violet-300"
+                                        >
+                                            <span className="break-words">
+                                                {skill}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeListItem(
+                                                        "skills",
+                                                        index
+                                                    )
+                                                }
+                                                aria-label={`Remove skill ${skill}`}
+                                                className="edit-profile-skill-remove shrink-0 rounded-md p-0.5 text-violet-300/60 transition hover:bg-red-500/10 hover:text-red-300"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </span>
+                                    )}
+                                    emptyMessage="Your skills will appear here."
+                                />
+                            </FormSection>
+
+                            {/* LEARNING GOALS */}
+
+                            <FormSection
+                                icon={Target}
+                                title="Learning Goals"
+                                description="Track the areas you want to improve."
+                            >
+                                <ListEditor
+                                    placeholder="Type a learning goal and press Enter"
+                                    items={formData.learningGoals}
+                                    onAdd={(event) =>
+                                        addListItem(
+                                            event,
+                                            "learningGoals",
+                                            "Learning goal"
+                                        )
+                                    }
+                                    renderItem={(goal, index) => (
+                                        <span
+                                            key={`${goal}-${index}`}
+                                            className="edit-profile-goal-badge inline-flex max-w-full items-center gap-2 rounded-xl border border-cyan-400/10 bg-cyan-500/[0.06] py-2 pl-3 pr-2 text-xs text-cyan-200/90"
+                                        >
+                                            <span className="break-words">
+                                                {goal}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeListItem(
+                                                        "learningGoals",
+                                                        index
+                                                    )
+                                                }
+                                                aria-label={`Remove learning goal ${goal}`}
+                                                className="edit-profile-goal-remove shrink-0 rounded-md p-0.5 text-cyan-200/50 transition hover:bg-red-500/10 hover:text-red-300"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </span>
+                                    )}
+                                    emptyMessage="Your learning goals will appear here."
+                                />
+                            </FormSection>
+
+                            {/* INTERVIEW PREFERENCES */}
+
+                            <FormSection
+                                icon={GraduationCap}
+                                title="Interview Preferences"
+                                description="Customize your preferred mock interview experience."
+                            >
+                                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                                    <FormField label="Preferred Difficulty">
+                                        <ThemedSelect
+                                            name="preferredDifficulty"
+                                            value={
+                                                formData.preferredDifficulty
+                                            }
+                                            onChange={(value) =>
+                                                handleSelectChange(
+                                                    "preferredDifficulty",
+                                                    value
+                                                )
+                                            }
+                                            options={DIFFICULTY_OPTIONS}
+                                            placeholder="Select difficulty"
+                                            icon={Gauge}
+                                        />
+                                    </FormField>
+
+                                    <FormField label="Preferred Interview Type">
+                                        <ThemedSelect
+                                            name="preferredInterviewType"
+                                            value={
+                                                formData.preferredInterviewType
+                                            }
+                                            onChange={(value) =>
+                                                handleSelectChange(
+                                                    "preferredInterviewType",
+                                                    value
+                                                )
+                                            }
+                                            options={INTERVIEW_TYPE_OPTIONS}
+                                            placeholder="Select interview type"
+                                            icon={MessageSquare}
+                                        />
+                                    </FormField>
+                                </div>
+                            </FormSection>
+                        </div>
+
+                        {/* FORM ACTIONS */}
+
+                        <div className="flex flex-col-reverse gap-3 border-t border-white/[0.06] bg-black/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-9">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/profile")}
+                                disabled={saving || removingPicture}
+                                className="edit-profile-cancel w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-5 py-3 text-sm font-medium text-zinc-400 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="submit"
+                                disabled={
+                                    saving ||
+                                    removingPicture ||
+                                    !hasChanges
+                                }
+                                className={`edit-profile-save inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-950/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto ${!hasChanges ? "is-unchanged" : ""}`}
+                            >
+                                {saving ? (
+                                    <>
+                                        <Loader2
+                                            size={17}
+                                            className="animate-spin"
+                                        />
+                                        Saving Changes...
+                                    </>
+                                ) : hasChanges ? (
+                                    <>
+                                        <Save size={17} />
+                                        Save Changes
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={17} />
+                                        No Changes
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </motion.div>
+
+                <p className="mt-5 text-center text-xs leading-5 text-zinc-700">
+                    Your profile information helps personalize your Synthex AI experience.
+                </p>
+            </div>
+
+            {/* REMOVE PICTURE MODAL */}
+
+            {removePictureModalOpen && (
+                <RemovePictureModal
+                    loading={removingPicture}
+                    onClose={() => setRemovePictureModalOpen(false)}
+                    onConfirm={handleRemoveProfilePicture}
+                />
+            )}
+        </PageLayout>
+    );
+};
+
+/* =========================================================
+   PAGE LAYOUT
+========================================================= */
+
+const PageLayout = ({
+    collapsed,
+    isDark = true,
+    setCollapsed,
+    logout,
+    children,
+}) => (
+    <div className={`edit-profile-page min-h-screen w-full overflow-x-hidden ${isDark ? "bg-[#05050a] text-white" : "bg-[#f7f5fc] text-[#211b30]"}`} data-theme={isDark ? "dark" : "light"}>
+       <style>{`
+    .edit-profile-page[data-theme="light"] { background: #f7f5fc; color: #211b30; }
+    .edit-profile-page[data-theme="light"] [class*="text-white"]:not(.edit-profile-save):not(.edit-profile-save *) { color: #241d35 !important; }
+    .edit-profile-page[data-theme="light"] [class*="text-zinc-300"],
+    .edit-profile-page[data-theme="light"] [class*="text-zinc-400"] { color: #625a70 !important; }
+    .edit-profile-page[data-theme="light"] [class*="text-zinc-500"] { color: #756d82 !important; }
+    .edit-profile-page[data-theme="light"] [class*="text-zinc-600"],
+    .edit-profile-page[data-theme="light"] [class*="text-zinc-700"] { color: #898195 !important; }
+    .edit-profile-page[data-theme="light"] [class*="border-white/"] { border-color: #e8e2f0 !important; }
+    .edit-profile-page[data-theme="light"] [class*="bg-white/[0.025]"],
+    .edit-profile-page[data-theme="light"] [class*="bg-white/[0.04]"],
+    .edit-profile-page[data-theme="light"] [class*="bg-white/[0.05]"] { background-color: #fff !important; }
+    .edit-profile-page[data-theme="light"] [class*="bg-[#0d0d12]"] { background-color: #fff !important; }
+    .edit-profile-page[data-theme="light"] [class*="bg-black/10"] { background-color: #faf9fd !important; }
+
+    .edit-profile-page[data-theme="light"] input:not([type="file"]),
+    .edit-profile-page[data-theme="light"] textarea {
+        background: #fff !important;
+        border-color: #ded7e9 !important;
+        color: #292238 !important;
+    }
+
+    .edit-profile-page[data-theme="light"] input::placeholder,
+    .edit-profile-page[data-theme="light"] textarea::placeholder { color: #a29aad !important; }
+
+    .edit-profile-page[data-theme="light"] input:focus,
+    .edit-profile-page[data-theme="light"] textarea:focus {
+        border-color: #8b5cf6 !important;
+        box-shadow: 0 0 0 3px rgb(139 92 246 / 12%) !important;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-cancel {
+        background: #fff;
+        border-color: #ddd5e9;
+        color: #514765 !important;
+        box-shadow: 0 2px 7px rgb(45 30 70 / 4%);
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-cancel:hover {
+        background: #f4efff;
+        border-color: #c9b8ed;
+        color: #5b21b6 !important;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-save {
+        background: #6d28d9;
+        color: #fff !important;
+        border: 1px solid #6d28d9;
+        box-shadow: 0 5px 14px rgb(109 40 217 / 20%);
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-save:hover:not(:disabled) {
+        background: #5b21b6;
+        border-color: #5b21b6;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-save:disabled,
+    .edit-profile-page[data-theme="light"] .edit-profile-save.is-unchanged {
+        background: #e9e3f1;
+        border-color: #e2dbea;
+        color: #8b8298 !important;
+        box-shadow: none;
+        opacity: 1;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-save:disabled svg,
+    .edit-profile-page[data-theme="light"] .edit-profile-save.is-unchanged svg {
+        color: #8b8298;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-save:not(:disabled) svg {
+        color: #fff;
+    }
+
+    /* Remove hover effects from the disabled No Changes button */
+    .edit-profile-page .edit-profile-save:disabled,
+    .edit-profile-page .edit-profile-save:disabled:hover,
+    .edit-profile-page .edit-profile-save.is-unchanged,
+    .edit-profile-page .edit-profile-save.is-unchanged:hover {
+        filter: none !important;
+        transform: none !important;
+        box-shadow: none !important;
+        cursor: not-allowed !important;
+        transition: none !important;
+    }
+
+    .edit-profile-page[data-theme="light"] section > div:first-child > div:first-child {
+        background: #eee7ff;
+        border-color: #c4b5fd;
+    }
+
+    .edit-profile-page[data-theme="light"] section > div:first-child > div:first-child svg {
+        color: #5b21b6 !important;
+        stroke-width: 2.25;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-skill-badge {
+        background: #eee7ff;
+        border-color: #a78bfa;
+        color: #4c1d95 !important;
+        font-weight: 600;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-skill-remove {
+        color: #6d28d9 !important;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-skill-remove:hover {
+        background: #fee2e2;
+        color: #b91c1c !important;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-goal-badge {
+        background: #e0f2fe;
+        border-color: #7dd3fc;
+        color: #075985 !important;
+        font-weight: 600;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-goal-remove {
+        color: #0369a1 !important;
+    }
+
+    .edit-profile-page[data-theme="light"] .edit-profile-goal-remove:hover {
+        background: #fee2e2;
+        color: #b91c1c !important;
+    }
+
+    @media (max-width: 640px) {
+        .edit-profile-page .edit-profile-save,
+        .edit-profile-page .edit-profile-cancel {
+            min-height: 46px;
+        }
+    }
+`}</style>
+        <Sidebar
+            collapsed={collapsed}
+            isDark={isDark}
+            setCollapsed={setCollapsed}
+            onLogout={logout}
+        />
+
+        <motion.main
+            className={`min-h-screen min-w-0 overflow-x-hidden pt-16 transition-[margin-left] duration-300 ease-in-out md:pt-0 ${collapsed ? "md:ml-20" : "md:ml-[260px]"
+                }`}
+        >
+            {children}
+        </motion.main>
+    </div>
+);
+
+/* =========================================================
+   FORM SECTION
+========================================================= */
+
+const FormSection = ({
+    icon: Icon,
+    title,
+    description,
+    children,
+}) => (
+    <section className="min-w-0 border-b border-white/[0.06] pb-8 last:border-b-0 last:pb-0">
+        <div className="mb-5 flex min-w-0 items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-400/[0.08] bg-violet-500/[0.08]">
+                <Icon size={17} className="text-violet-300" />
+            </div>
+
+            <div className="min-w-0">
+                <h3 className="text-sm font-semibold text-white sm:text-base">
+                    {title}
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    {description}
+                </p>
+            </div>
+        </div>
+
+        {children}
+    </section>
+);
+
+/* =========================================================
+   FORM FIELD
+========================================================= */
+
+const FormField = ({
+    label,
+    required = false,
+    hint,
+    trailing,
+    children,
+}) => (
+    <div className="min-w-0">
+        <div className="mb-2 flex items-center justify-between gap-3">
+            <label className="block text-sm font-medium text-zinc-400">
+                {label}
+                {required && (
+                    <span className="ml-1 text-violet-400">*</span>
+                )}
+            </label>
+
+            {trailing}
+        </div>
+
+        {children}
+
+        {hint && (
+            <p className="mt-2 text-xs leading-5 text-zinc-600">
+                {hint}
+            </p>
+        )}
+    </div>
+);
+
+/* =========================================================
+   SHARED INPUT STYLE
+========================================================= */
+
+const inputClass = (extra = "") =>
+    `block w-full min-w-0 min-h-12 rounded-xl
+    border border-white/[0.08]
+    bg-white/[0.025]
+    px-4 py-3
+    text-sm font-normal text-white
+    outline-none transition-all duration-200
+    placeholder:text-zinc-600
+    hover:border-white/[0.12]
+    focus:border-violet-500/50
+    focus:bg-white/[0.04]
+    focus:ring-2 focus:ring-violet-500/10
+    disabled:cursor-not-allowed
+    disabled:opacity-60
+    ${extra}`;
+
+/* =========================================================
+   LIST EDITOR
+========================================================= */
+
+const ListEditor = ({
+    placeholder,
+    items,
+    onAdd,
+    renderItem,
+    emptyMessage,
+}) => (
+    <div className="min-w-0">
+        <input
+            type="text"
+            onKeyDown={onAdd}
+            maxLength={MAX_LIST_ITEM_LENGTH}
+            placeholder={placeholder}
+            className={inputClass()}
+            aria-label={placeholder}
+        />
+
+        <p className="mt-2 text-xs leading-5 text-zinc-600">
+            Press Enter to add an item. Maximum{" "}
+            {MAX_LIST_ITEM_LENGTH} characters per item.
+        </p>
+
+        {items.length > 0 ? (
+            <div className="mt-4 flex min-w-0 flex-wrap gap-2">
+                {items.map((item, index) => renderItem(item, index))}
+            </div>
+        ) : (
+            <p className="mt-3 rounded-xl border border-dashed border-white/[0.07] px-4 py-3 text-xs text-zinc-600">
+                {emptyMessage}
+            </p>
+        )}
+    </div>
+);
+
+/* =========================================================
+   REMOVE PICTURE MODAL
+========================================================= */
+
+const RemovePictureModal = ({
+    loading,
+    onClose,
+    onConfirm,
+}) => {
+    const handleClose = useCallback(() => {
+        if (!loading) onClose();
+    }, [loading, onClose]);
+
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") {
+                handleClose();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [handleClose]);
+
+    return (
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                    handleClose();
+                }
+            }}
+        >
+            <motion.div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="remove-picture-title"
+                aria-describedby="remove-picture-description"
+                initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111113] shadow-2xl shadow-black/50"
+            >
+                <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-red-500/10 blur-[80px]" />
+
+                <button
+                    type="button"
+                    onClick={handleClose}
+                    disabled={loading}
+                    aria-label="Close dialog"
+                    className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+                >
+                    <X size={17} />
+                </button>
+
+                <div className="relative p-6 sm:p-7">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-red-400/10 bg-red-500/[0.08] text-red-400">
+                        <AlertTriangle size={21} />
+                    </div>
+
+                    <h3
+                        id="remove-picture-title"
+                        className="mt-5 text-lg font-semibold text-white"
+                    >
+                        Remove Profile Picture?
+                    </h3>
+
+                    <p
+                        id="remove-picture-description"
+                        className="mt-2 text-sm leading-6 text-zinc-500"
+                    >
+                        Are you sure you want to remove the displayed profile
+                        picture? Your initials will be shown instead.
+                    </p>
+
+                    <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            disabled={loading}
+                            className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-2.5 text-sm text-zinc-400 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={onConfirm}
+                            disabled={loading}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500/90 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2
+                                        size={16}
+                                        className="animate-spin"
+                                    />
+                                    Removing...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 size={16} />
+                                    Remove Picture
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+export default EditProfile;
